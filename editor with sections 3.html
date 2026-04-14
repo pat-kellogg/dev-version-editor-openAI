@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minimal Section-First Editor</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --border: #dbe4ee;
+      --text: #1f2937;
+      --muted: #64748b;
+      --soft: #eef2f7;
+      --brand: #4f46e5;
+      --brand-soft: rgba(79,70,229,.12);
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      display: grid;
+      grid-template-columns: 280px 1fr 340px;
+      min-height: 100vh;
+    }
+    aside, main { min-width: 0; }
+    #left, #right {
+      background: var(--panel);
+      padding: 16px;
+      overflow: auto;
+    }
+    #left { border-right: 1px solid var(--border); }
+    #right { border-left: 1px solid var(--border); }
+    h2, h3, h4 { margin: 0 0 12px; }
+    .hint { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .group {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      background: var(--soft);
+      margin-bottom: 14px;
+    }
+    .palette-item, .btn {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: var(--panel);
+      cursor: pointer;
+      font: inherit;
+      text-align: left;
+    }
+    .palette-item + .palette-item, .btn + .btn { margin-top: 10px; }
+    .btn:hover, .palette-item:hover { background: #f8fbff; }
+    .btn.primary { border-color: var(--brand); color: var(--brand); }
+    .btn.danger { border-color: var(--danger); color: var(--danger); }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .preset-grid { display:grid; grid-template-columns:1fr; gap:8px; margin-top:10px; }
+    .preset-btn {
+      width:100%; text-align:left; padding:10px 12px; border:1px solid var(--border); border-radius:12px;
+      background:var(--panel); color:var(--text); cursor:pointer; font:inherit; line-height:1.25;
+    }
+    .preset-btn:hover { background:#f8fbff; }
+    .preset-btn.active { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-soft); }
+    .preset-btn strong { display:block; font-size:12px; margin-bottom:4px; }
+    .preset-btn span { display:block; font-size:11px; color: var(--muted); word-break: break-word; }
+    label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+    input, textarea, select {
+      width: 100%;
+      font: inherit;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: white;
+    }
+    textarea { min-height: 92px; resize: vertical; }
+    #canvasWrap { padding: 22px; overflow: auto; }
+    #canvas {
+      width: min(1200px, 100%);
+      margin: 0 auto;
+      min-height: calc(100vh - 44px);
+      background: white;
+      border: 2px dashed var(--border);
+      border-radius: 18px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+    .empty {
+      border: 1px dashed var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      color: var(--muted);
+      background: #fafcff;
+    }
+    .section-shell {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(15,23,42,.04);
+    }
+    .section-shell.selected { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .section-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--muted);
+      background: var(--soft);
+      border: 1px solid var(--border);
+      user-select: none;
+      cursor: pointer;
+    }
+    .section-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .section-grid {
+      display: grid;
+      position: relative;
+      isolation: isolate;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: 320px;
+      grid-auto-rows: 320px;
+      gap: 18px;
+      min-height: 120px;
+      border-radius: 12px;
+      transition: outline-color .12s ease, background-color .12s ease;
+    }
+    .section-drop-guides {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .section-drop-cell {
+      border: 1px dashed rgba(79,70,229,.24);
+      border-radius: 12px;
+      background: rgba(79,70,229,.035);
+      min-width: 0;
+      min-height: 0;
+    }
+    .section-grid.drop-target .section-drop-cell {
+      border-color: rgba(79,70,229,.46);
+      background: rgba(79,70,229,.08);
+    }
+    .section-grid.drop-target {
+      outline: 2px dashed var(--brand);
+      outline-offset: 4px;
+      background: rgba(79,70,229,.03);
+    }
+    .item-shell {
+      min-width: 0;
+      z-index: 1;
+      min-height: 0;
+      border-radius: 16px;
+      cursor: pointer;
+      position: relative;
+    }
+    .item-shell.selected {
+      box-shadow: 0 0 0 3px var(--brand-soft);
+    }
+    editor-info-card, editor-menu {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      min-height: 0;
+    }
+    .muted { color: var(--muted); }
+    .xsmall { font-size: 12px; }
+
+    .select-top {
+      margin-top: 8px;
+    }
+    .sticky-actions {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: var(--panel);
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <aside id="left">
+    <h2>Palette</h2>
+    <div class="hint">Drag Section, Info Card, or Menu into the canvas. Cards and menus can be dropped into any section.</div>
+    <div class="group">
+      <button class="palette-item" draggable="true" data-add="section">Section</button>
+      <button class="palette-item" draggable="true" data-add="card">Info Card</button>
+      <button class="palette-item" draggable="true" data-add="menu">Menu</button>
+    </div>
+    <div class="group">
+      <h4>Quick Add</h4>
+      <button class="btn" data-add="section">Add Section</button>
+      <button class="btn" data-add="card">Add Info Card</button>
+      <button class="btn" data-add="menu">Add Menu</button>
+    </div>
+    <div class="sticky-actions">
+      <div class="group" style="margin-bottom:10px;">
+        <h4>Selection Actions</h4>
+        <button class="btn danger" id="deleteBtnTop" type="button">Delete Selected</button>
+      </div>
+      <button class="btn primary" id="exportBtn" type="button">Export HTML</button>
+    </div>
+    <div class="group" id="leftPanel"></div>
+    <button class="btn danger" id="deleteBtn" type="button" style="display:none;">Delete Selected</button>
+  </aside>
+
+  <main id="canvasWrap">
+    <div id="canvas"></div>
+  </main>
+
+  <aside id="right">
+    <h2>Properties</h2>
+    <div id="rightPanel" class="muted">Select a section or component.</div>
+  </aside>
+
+  <script>
+    class EditorInfoCard extends HTMLElement {
+      static get observedAttributes() { return ['heading','body','cta']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      render() {
+        const heading = this.getAttribute('heading') || 'Card Heading';
+        const body = this.getAttribute('body') || 'Card body text goes here.';
+        const cta = this.getAttribute('cta') || 'Learn More';
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host { display:block; width:100%; height:100%; min-width:0; min-height:0; }
+            article { display:grid; grid-template-rows:160px 1fr; min-height:220px; height:100%; border:1px solid #dbe4ee; border-radius:16px; background:#fff; overflow:hidden; }
+            .media { background: linear-gradient(135deg, #dbeafe, #ede9fe); }
+            .body { padding:18px; display:flex; flex-direction:column; gap:10px; min-width:0; }
+            h4 { margin:0; font-size:20px; line-height:1.2; color:#0f172a; }
+            p { margin:0; color:#64748b; line-height:1.5; white-space:pre-wrap; }
+            button { align-self:flex-start; margin-top:auto; border:none; border-radius:12px; padding:10px 14px; background:#4f46e5; color:#fff; font-weight:700; font:inherit; }
+          </style>
+          <article>
+            <div class="media"></div>
+            <div class="body">
+              <h4>${escapeHTML(heading)}</h4>
+              <p>${escapeHTML(body)}</p>
+              <button type="button">${escapeHTML(cta)}</button>
+            </div>
+          </article>`;
+      }
+    }
+    customElements.define('editor-info-card', EditorInfoCard);
+
+    class EditorMenu extends HTMLElement {
+      static get observedAttributes() { return ['brand','items','cta']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      render() {
+        const brand = this.getAttribute('brand') || 'Brand';
+        const items = (this.getAttribute('items') || 'Home|About|Services|Contact').split('|').map(s => s.trim()).filter(Boolean);
+        const cta = this.getAttribute('cta') || 'Get Started';
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host { display:block; width:100%; height:100%; min-width:0; min-height:0; }
+            nav { border:1px solid #dbe4ee; border-radius:16px; background:#fff; padding:16px 18px; height:100%; display:flex; align-items:center; }
+            .bar { display:grid; grid-template-columns:auto 1fr auto; gap:16px; align-items:center; width:100%; }
+            .brand { font-weight:800; color:#0f172a; }
+            .items { display:flex; gap:18px; flex-wrap:wrap; color:#64748b; font-weight:600; min-width:0; }
+            .cta { border-radius:12px; padding:10px 14px; background:#4f46e5; color:#fff; font-weight:700; white-space:nowrap; }
+            @media (max-width:760px) { .bar { grid-template-columns:1fr; } }
+          </style>
+          <nav><div class="bar"><div class="brand">${escapeHTML(brand)}</div><div class="items">${items.map(label => `<span>${escapeHTML(label)}</span>`).join('')}</div><div class="cta">${escapeHTML(cta)}</div></div></nav>`;
+      }
+    }
+    customElements.define('editor-menu', EditorMenu);
+
+    const state = {
+      sections: [],
+      selected: { sectionId: null, itemId: null }
+    };
+    let sectionCount = 0;
+    let itemCount = 0;
+    let dragType = null;
+
+    const columnTemplatePresets = [
+      { label: '1 column', value: 'minmax(0, 1fr)' },
+      { label: '2 equal', value: 'repeat(2, minmax(0, 1fr))' },
+      { label: '3 equal', value: 'repeat(3, minmax(0, 1fr))' },
+      { label: '4 equal', value: 'repeat(4, minmax(0, 1fr))' },
+      { label: 'Sidebar left', value: '280px minmax(0, 1fr)' },
+      { label: 'Sidebar right', value: 'minmax(0, 1fr) 280px' },
+      { label: 'Center focus', value: 'minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr)' },
+      { label: '12-column grid', value: 'repeat(12, minmax(0, 1fr))' },
+      { label: 'Hero split', value: 'minmax(0, 1.2fr) minmax(0, 1fr)' }
+    ];
+    const rowTemplatePresets = [
+      { label: '1 standard row', value: '320px' },
+      { label: '2 equal rows', value: 'minmax(0, 1fr) minmax(0, 1fr)' },
+      { label: '3 equal rows', value: 'minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr)' },
+      { label: 'Hero + content', value: 'auto minmax(0, 1fr)' },
+      { label: 'Tall hero + content', value: 'minmax(420px, auto) minmax(0, 1fr)' },
+      { label: 'Header + content + footer', value: '80px minmax(0, 1fr) 80px' },
+      { label: 'Landing stack', value: 'auto minmax(420px, auto) auto minmax(0, 1fr) auto' }
+    ];
+
+    const canvas = document.getElementById('canvas');
+    const leftPanel = document.getElementById('leftPanel');
+    const rightPanel = document.getElementById('rightPanel');
+
+    function escapeHTML(str) {
+      return String(str ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+    function escapeAttr(str) { return escapeHTML(str); }
+
+    function makeSection() {
+      sectionCount += 1;
+      return {
+        id: `section-${sectionCount}`,
+        title: `Section ${sectionCount}`,
+        columns: 'repeat(2, minmax(0, 1fr))',
+        rows: '320px',
+        autoRows: '320px',
+        gap: '18px',
+        items: []
+      };
+    }
+
+    function makeItem(type) {
+      itemCount += 1;
+      if (type === 'menu') {
+        return {
+          id: `item-${itemCount}`,
+          type: 'menu',
+          brand: 'Brand',
+          items: ['Home', 'About', 'Services', 'Contact'],
+          cta: 'Get Started',
+          colSpan: 2,
+          rowSpan: 1
+        };
+      }
+      return {
+        id: `item-${itemCount}`,
+        type: 'card',
+        heading: 'Card Heading',
+        body: 'Card body text goes here.',
+        cta: 'Learn More',
+        colSpan: 1,
+        rowSpan: 1
+      };
+    }
+
+    function getSelectedSection() {
+      return state.sections.find(s => s.id === state.selected.sectionId) || null;
+    }
+
+    function getSelectedItem() {
+      const section = getSelectedSection();
+      if (!section || !state.selected.itemId) return null;
+      return section.items.find(i => i.id === state.selected.itemId) || null;
+    }
+
+    function selectSection(sectionId) {
+      state.selected = { sectionId, itemId: null };
+      render();
+    }
+
+    function selectItem(sectionId, itemId) {
+      state.selected = { sectionId, itemId };
+      render();
+    }
+
+    function addSection() {
+      const section = makeSection();
+      state.sections.push(section);
+      selectSection(section.id);
+    }
+
+    function ensureTargetSection() {
+      let section = getSelectedSection();
+      if (!section) {
+        if (!state.sections.length) addSection();
+        section = getSelectedSection();
+      }
+      return section;
+    }
+
+    function addItem(type, sectionId = null) {
+      const section = state.sections.find(s => s.id === sectionId) || ensureTargetSection();
+      if (!section) return;
+      const item = makeItem(type);
+      section.items.push(item);
+      selectItem(section.id, item.id);
+    }
+
+    function deleteSelected() {
+      if (state.selected.itemId) {
+        const section = getSelectedSection();
+        if (!section) return;
+        section.items = section.items.filter(i => i.id !== state.selected.itemId);
+        state.selected.itemId = null;
+      } else if (state.selected.sectionId) {
+        state.sections = state.sections.filter(s => s.id !== state.selected.sectionId);
+        state.selected = { sectionId: state.sections[0]?.id || null, itemId: null };
+      }
+      render();
+    }
+
+
+    function renderPresetButtons(presets, currentValue, kind) {
+      return `<div class="preset-grid">${presets.map(preset => {
+        const active = preset.value === currentValue ? ' active' : '';
+        return `<button type="button" class="preset-btn${active}" data-preset-kind="${kind}" data-preset-value="${escapeAttr(preset.value)}"><strong>${escapeHTML(preset.label)}</strong><span>${escapeHTML(preset.value)}</span></button>`;
+      }).join('')}</div>`;
+    }
+
+    function renderPresetSelect(presets, activeValue, kind, selectId) {
+      return `<label class="select-top">Preset selector</label>
+        <select id="${selectId}" data-preset-select="${kind}">
+          <option value="">Choose a preset…</option>
+          ${presets.map(preset => `<option value="${escapeAttr(preset.value)}" ${preset.value === activeValue ? 'selected' : ''}>${escapeHTML(preset.label)}</option>`).join('')}
+        </select>`;
+    }
+
+    function renderLeftPanel() {
+      const section = getSelectedSection();
+      if (!section) {
+        leftPanel.innerHTML = '<h4>Layout</h4><div class="hint">Add or select a section to edit its grid.</div>';
+        return;
+      }
+      leftPanel.innerHTML = `
+        <h4>Editing: ${escapeHTML(section.title)}</h4>
+        <div class="hint">This panel controls the selected section’s grid, similar to the grid controls from new 30.</div>
+        <div class="group">
+          <label>Section title</label>
+          <input id="leftSectionTitle" value="${escapeAttr(section.title)}">
+        </div>
+        <div class="group">
+          <h4>Column Template</h4>
+          <label>grid-template-columns</label>
+          <input id="leftColumns" value="${escapeAttr(section.columns)}">
+          <div class="xsmall muted" style="margin-top:8px;">Examples: repeat(2, minmax(0, 1fr)) · 280px 1fr · 1fr 2fr 1fr</div>
+          ${renderPresetSelect(columnTemplatePresets, section.columns, 'columns', 'leftColumnsPreset')}
+        </div>
+        <div class="group">
+          <h4>Row Template</h4>
+          <label>grid-template-rows</label>
+          <input id="leftRows" value="${escapeAttr(section.rows)}">
+          <div class="xsmall muted" style="margin-top:8px;">Examples: 320px · auto minmax(0, 1fr) · 80px minmax(0, 1fr) 80px</div>
+          ${renderPresetSelect(rowTemplatePresets, section.rows, 'rows', 'leftRowsPreset')}
+          <label style="margin-top:10px;">grid-auto-rows</label>
+          <input id="leftAutoRows" value="${escapeAttr(section.autoRows)}">
+          <label style="margin-top:10px;">gap</label>
+          <input id="leftGap" value="${escapeAttr(section.gap)}">
+        </div>
+      `;
+      document.getElementById('leftSectionTitle').oninput = e => { section.title = e.target.value || 'Section'; renderCanvas(); renderRightPanel(); };
+      document.getElementById('leftColumns').oninput = e => { section.columns = e.target.value || 'repeat(2, minmax(0, 1fr))'; renderCanvas(); renderLeftPanel(); };
+      document.getElementById('leftRows').oninput = e => { section.rows = e.target.value || '320px'; renderCanvas(); renderLeftPanel(); };
+      document.getElementById('leftAutoRows').oninput = e => { section.autoRows = e.target.value || '320px'; renderCanvas(); };
+      document.getElementById('leftGap').oninput = e => { section.gap = e.target.value || '18px'; renderCanvas(); };
+      const leftColumnsPreset = document.getElementById('leftColumnsPreset');
+      const leftRowsPreset = document.getElementById('leftRowsPreset');
+      if (leftColumnsPreset) {
+        leftColumnsPreset.onchange = e => {
+          const value = e.target.value || '';
+          if (value) {
+            section.columns = value;
+            renderCanvas();
+            renderLeftPanel();
+            renderRightPanel();
+          }
+        };
+      }
+      if (leftRowsPreset) {
+        leftRowsPreset.onchange = e => {
+          const value = e.target.value || '';
+          if (value) {
+            section.rows = value;
+            renderCanvas();
+            renderLeftPanel();
+            renderRightPanel();
+          }
+        };
+      }
+    }
+
+    function renderRightPanel() {
+      const section = getSelectedSection();
+      const item = getSelectedItem();
+      if (!section) {
+        rightPanel.innerHTML = '<div class="muted">Select a section or component.</div>';
+        return;
+      }
+      if (!item) {
+        rightPanel.innerHTML = `
+          <div class="group">
+            <h4>Section</h4>
+            <div class="hint">Drag cards and menus into this section, or use the buttons below.</div>
+            <button class="btn" id="addCardToSection" type="button">Add Info Card</button>
+            <button class="btn" id="addMenuToSection" type="button">Add Menu</button>
+          </div>
+          <div class="group">
+            <h4>Section summary</h4>
+            <div class="xsmall muted">${escapeHTML(section.columns)}</div>
+            <div class="xsmall muted" style="margin-top:6px;">Rows: ${escapeHTML(section.rows)} · Auto: ${escapeHTML(section.autoRows)} · Gap: ${escapeHTML(section.gap)}</div>
+          </div>`;
+        document.getElementById('addCardToSection').onclick = () => addItem('card', section.id);
+        document.getElementById('addMenuToSection').onclick = () => addItem('menu', section.id);
+        return;
+      }
+      if (item.type === 'card') {
+        rightPanel.innerHTML = `
+          <div class="group">
+            <h4>Info Card</h4>
+            <label>Heading</label><input id="itemHeading" value="${escapeAttr(item.heading)}">
+            <label style="margin-top:10px;">Body</label><textarea id="itemBody">${escapeHTML(item.body)}</textarea>
+            <label style="margin-top:10px;">CTA</label><input id="itemCta" value="${escapeAttr(item.cta)}">
+          </div>
+          <div class="group">
+            <h4>Span</h4>
+            <div class="row">
+              <div><label>Column span</label><input id="itemColSpan" type="number" min="1" max="12" value="${item.colSpan || 1}"></div>
+              <div><label>Row span</label><input id="itemRowSpan" type="number" min="1" max="12" value="${item.rowSpan || 1}"></div>
+            </div>
+          </div>`;
+        document.getElementById('itemHeading').oninput = e => { item.heading = e.target.value; renderCanvas(); };
+        document.getElementById('itemBody').oninput = e => { item.body = e.target.value; renderCanvas(); };
+        document.getElementById('itemCta').oninput = e => { item.cta = e.target.value; renderCanvas(); };
+      } else {
+        rightPanel.innerHTML = `
+          <div class="group">
+            <h4>Menu</h4>
+            <label>Brand</label><input id="itemBrand" value="${escapeAttr(item.brand)}">
+            <label style="margin-top:10px;">Items (use | between labels)</label><input id="itemItems" value="${escapeAttr((item.items || []).join('|'))}">
+            <label style="margin-top:10px;">CTA</label><input id="itemCta" value="${escapeAttr(item.cta)}">
+          </div>
+          <div class="group">
+            <h4>Span</h4>
+            <div class="row">
+              <div><label>Column span</label><input id="itemColSpan" type="number" min="1" max="12" value="${item.colSpan || 2}"></div>
+              <div><label>Row span</label><input id="itemRowSpan" type="number" min="1" max="12" value="${item.rowSpan || 1}"></div>
+            </div>
+          </div>`;
+        document.getElementById('itemBrand').oninput = e => { item.brand = e.target.value; renderCanvas(); };
+        document.getElementById('itemItems').oninput = e => { item.items = e.target.value.split('|').map(v => v.trim()).filter(Boolean); renderCanvas(); };
+        document.getElementById('itemCta').oninput = e => { item.cta = e.target.value; renderCanvas(); };
+      }
+      document.getElementById('itemColSpan').oninput = e => { item.colSpan = Math.max(1, parseInt(e.target.value || '1', 10) || 1); renderCanvas(); };
+      document.getElementById('itemRowSpan').oninput = e => { item.rowSpan = Math.max(1, parseInt(e.target.value || '1', 10) || 1); renderCanvas(); };
+    }
+
+    function splitTopLevelTracks(value) {
+      const source = String(value || '').trim();
+      if (!source) return [];
+      const tracks = [];
+      let current = '';
+      let depth = 0;
+      for (const ch of source) {
+        if (ch === '(') depth += 1;
+        if (ch === ')') depth = Math.max(0, depth - 1);
+        if (/\s/.test(ch) && depth === 0) {
+          if (current.trim()) {
+            tracks.push(current.trim());
+            current = '';
+          }
+        } else {
+          current += ch;
+        }
+      }
+      if (current.trim()) tracks.push(current.trim());
+      return tracks;
+    }
+
+    function countTemplateTracks(value, fallback = 1) {
+      const source = String(value || '').trim();
+      if (!source) return fallback;
+      const repeatMatch = source.match(/^repeat\(\s*(\d+)\s*,/i);
+      if (repeatMatch) return Math.max(1, parseInt(repeatMatch[1], 10) || fallback);
+      return Math.max(1, splitTopLevelTracks(source).length || fallback);
+    }
+
+    function addSectionDropGuides(grid, section) {
+      const cols = Math.min(12, countTemplateTracks(section.columns, 2));
+      const rows = Math.min(8, countTemplateTracks(section.rows, 1));
+      const guides = document.createElement('div');
+      guides.className = 'section-drop-guides';
+      guides.style.gridTemplateColumns = section.columns || 'repeat(2, minmax(0, 1fr))';
+      guides.style.gridTemplateRows = section.rows || '320px';
+      guides.style.gridAutoRows = section.autoRows || '320px';
+      guides.style.gap = section.gap || '18px';
+      for (let i = 0; i < cols * rows; i += 1) {
+        const cell = document.createElement('div');
+        cell.className = 'section-drop-cell';
+        guides.appendChild(cell);
+      }
+      grid.appendChild(guides);
+    }
+
+    function buildSectionShell(section) {
+      const shell = document.createElement('section');
+      shell.className = 'section-shell' + (state.selected.sectionId === section.id && !state.selected.itemId ? ' selected' : '');
+      shell.dataset.sectionId = section.id;
+      shell.innerHTML = `
+        <div class="section-head">
+          <div class="section-title" data-select-section>${escapeHTML(section.title)}</div>
+          <div class="section-actions">
+            <button class="btn" type="button" data-add-card>Add Card</button>
+            <button class="btn" type="button" data-add-menu>Add Menu</button>
+          </div>
+        </div>
+        <div class="section-grid" style="grid-template-columns:${escapeAttr(section.columns)};grid-template-rows:${escapeAttr(section.rows)};grid-auto-rows:${escapeAttr(section.autoRows)};gap:${escapeAttr(section.gap)};"></div>
+      `;
+      shell.querySelector('[data-select-section]').onclick = e => { e.stopPropagation(); selectSection(section.id); };
+      shell.onclick = e => { if (!e.target.closest('.item-shell')) selectSection(section.id); };
+      shell.querySelector('[data-add-card]').onclick = e => { e.stopPropagation(); addItem('card', section.id); };
+      shell.querySelector('[data-add-menu]').onclick = e => { e.stopPropagation(); addItem('menu', section.id); };
+
+      const grid = shell.querySelector('.section-grid');
+      addSectionDropGuides(grid, section);
+      grid.addEventListener('dragover', e => {
+        if (dragType === 'card' || dragType === 'menu') {
+          e.preventDefault();
+          grid.classList.add('drop-target');
+        }
+      });
+      grid.addEventListener('dragleave', () => grid.classList.remove('drop-target'));
+      grid.addEventListener('drop', e => {
+        if (dragType === 'card' || dragType === 'menu') {
+          e.preventDefault();
+          grid.classList.remove('drop-target');
+          addItem(dragType, section.id);
+          dragType = null;
+        }
+      });
+
+      if (!section.items.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'Section is empty. Drag a card or menu here, or use the Add buttons.';
+        empty.style.gridColumn = '1 / -1';
+        grid.appendChild(empty);
+      } else {
+        section.items.forEach(item => {
+          const itemShell = document.createElement('div');
+          itemShell.className = 'item-shell' + (state.selected.itemId === item.id ? ' selected' : '');
+          itemShell.style.gridColumn = `span ${item.colSpan || 1}`;
+          itemShell.style.gridRow = `span ${item.rowSpan || 1}`;
+          itemShell.onclick = e => { e.stopPropagation(); selectItem(section.id, item.id); };
+          const component = document.createElement(item.type === 'menu' ? 'editor-menu' : 'editor-info-card');
+          if (item.type === 'menu') {
+            component.setAttribute('brand', item.brand || 'Brand');
+            component.setAttribute('items', (item.items || []).join('|'));
+            component.setAttribute('cta', item.cta || 'Get Started');
+          } else {
+            component.setAttribute('heading', item.heading || 'Card Heading');
+            component.setAttribute('body', item.body || 'Card body text goes here.');
+            component.setAttribute('cta', item.cta || 'Learn More');
+          }
+          itemShell.appendChild(component);
+          grid.appendChild(itemShell);
+        });
+      }
+      return shell;
+    }
+
+    function renderCanvas() {
+      canvas.innerHTML = '';
+      if (!state.sections.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = 'Drag a Section into the canvas or use Add Section.';
+        canvas.appendChild(empty);
+        return;
+      }
+      state.sections.forEach(section => canvas.appendChild(buildSectionShell(section)));
+    }
+
+    function render() {
+      renderCanvas();
+      renderLeftPanel();
+      renderRightPanel();
+    }
+
+    function exportHTML() {
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Section First Export</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, system-ui, Arial, sans-serif; background: #f8fafc; color: #1f2937; }
+    main { width: min(1200px, calc(100% - 32px)); margin: 24px auto; display: flex; flex-direction: column; gap: 24px; }
+    .section-grid { display: grid; }
+    editor-info-card, editor-menu { display:block; width:100%; height:100%; min-width:0; min-height:0; }
+  </style>
+</head>
+<body>
+  <main>
+    ${state.sections.map(section => `
+      <section>
+        <div class="section-grid" style="grid-template-columns:${escapeAttr(section.columns)};grid-template-rows:${escapeAttr(section.rows)};grid-auto-rows:${escapeAttr(section.autoRows)};gap:${escapeAttr(section.gap)};">
+          ${section.items.map(item => item.type === 'card' ? `
+            <editor-info-card style="grid-column:span ${item.colSpan || 1};grid-row:span ${item.rowSpan || 1};" heading="${escapeAttr(item.heading)}" body="${escapeAttr(item.body)}" cta="${escapeAttr(item.cta)}"></editor-info-card>
+          ` : `
+            <editor-menu style="grid-column:span ${item.colSpan || 1};grid-row:span ${item.rowSpan || 1};" brand="${escapeAttr(item.brand)}" items="${escapeAttr((item.items || []).join('|'))}" cta="${escapeAttr(item.cta)}"></editor-menu>
+          `).join('')}
+        </div>
+      </section>
+    `).join('')}
+  </main>
+  <script>
+    function escapeHTML(str) {
+      return String(str ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+    }
+    class EditorInfoCard extends HTMLElement {
+      static get observedAttributes() { return ['heading','body','cta']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      render() {
+        const heading = this.getAttribute('heading') || 'Card Heading';
+        const body = this.getAttribute('body') || 'Card body text goes here.';
+        const cta = this.getAttribute('cta') || 'Learn More';
+        this.shadowRoot.innerHTML = \
+          '<style>:host{display:block;width:100%;height:100%;min-width:0;min-height:0}article{display:grid;grid-template-rows:160px 1fr;min-height:220px;height:100%;border:1px solid #dbe4ee;border-radius:16px;background:#fff;overflow:hidden}.media{background:linear-gradient(135deg,#dbeafe,#ede9fe)}.body{padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0}h4{margin:0;font-size:20px;line-height:1.2;color:#0f172a}p{margin:0;color:#64748b;line-height:1.5;white-space:pre-wrap}button{align-self:flex-start;margin-top:auto;border:none;border-radius:12px;padding:10px 14px;background:#4f46e5;color:#fff;font-weight:700;font:inherit}</style><article><div class="media"></div><div class="body"><h4>' + escapeHTML(heading) + '</h4><p>' + escapeHTML(body) + '</p><button type="button">' + escapeHTML(cta) + '</button></div></article>';
+      }
+    }
+    customElements.define('editor-info-card', EditorInfoCard);
+    class EditorMenu extends HTMLElement {
+      static get observedAttributes() { return ['brand','items','cta']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      render() {
+        const brand = this.getAttribute('brand') || 'Brand';
+        const items = (this.getAttribute('items') || 'Home|About|Services|Contact').split('|').map(s => s.trim()).filter(Boolean);
+        const cta = this.getAttribute('cta') || 'Get Started';
+        this.shadowRoot.innerHTML = \
+          '<style>:host{display:block;width:100%;height:100%;min-width:0;min-height:0}nav{border:1px solid #dbe4ee;border-radius:16px;background:#fff;padding:16px 18px;height:100%;display:flex;align-items:center}.bar{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;width:100%}.brand{font-weight:800;color:#0f172a}.items{display:flex;gap:18px;flex-wrap:wrap;color:#64748b;font-weight:600;min-width:0}.cta{border-radius:12px;padding:10px 14px;background:#4f46e5;color:#fff;font-weight:700;white-space:nowrap}@media (max-width:760px){.bar{grid-template-columns:1fr}}</style><nav><div class="bar"><div class="brand">' + escapeHTML(brand) + '</div><div class="items">' + items.map(label => '<span>' + escapeHTML(label) + '</span>').join('') + '</div><div class="cta">' + escapeHTML(cta) + '</div></div></nav>';
+      }
+    }
+    customElements.define('editor-menu', EditorMenu);
+  <\/script>
+</body>
+</html>`;
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'section-first-export.html';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    document.querySelectorAll('[data-add]').forEach(el => {
+      if (el.getAttribute('draggable') === 'true') {
+        el.addEventListener('dragstart', e => {
+          dragType = el.dataset.add;
+          e.dataTransfer.setData('text/plain', dragType);
+          e.dataTransfer.effectAllowed = 'copy';
+        });
+        el.addEventListener('dragend', () => { dragType = null; document.querySelectorAll('.drop-target').forEach(n => n.classList.remove('drop-target')); });
+      }
+      el.addEventListener('click', () => {
+        const type = el.dataset.add;
+        if (type === 'section') addSection();
+        else addItem(type);
+      });
+    });
+
+    canvas.addEventListener('dragover', e => {
+      if (dragType === 'section') e.preventDefault();
+    });
+    canvas.addEventListener('drop', e => {
+      if (dragType === 'section') {
+        e.preventDefault();
+        addSection();
+        dragType = null;
+      }
+    });
+
+    document.getElementById('deleteBtn').onclick = deleteSelected;
+    document.getElementById('deleteBtnTop').onclick = deleteSelected;
+    document.getElementById('exportBtn').onclick = exportHTML;
+
+    addSection();
+    render();
+  </script>
+</body>
+</html>
