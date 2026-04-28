@@ -902,13 +902,9 @@ body:not([data-theme="dark"]) #designSystemModal #dsCloseTop {
     }
 
 
-    /* Canvas component drag between section grids */
-    .item-shell[draggable="true"] {
-      cursor: grab;
-    }
-    .item-shell[draggable="true"]:active {
-      cursor: grabbing;
-    }
+    /* Existing component drag/swap - stable patch */
+    .item-shell[draggable="true"] { cursor: grab; }
+    .item-shell[draggable="true"]:active { cursor: grabbing; }
     .item-shell.canvas-item-dragging {
       opacity: .48 !important;
       outline: 2px dashed var(--brand);
@@ -2940,6 +2936,76 @@ body:not([data-theme="dark"]) #designSystemModal #dsCloseTop {
       scheduleAutoSave();
     }
 
+    function findSectionAndItem(itemId) {
+      for (const section of state.sections) {
+        const item = section.items.find(candidate => candidate.id === itemId);
+        if (item) return { section, item };
+      }
+      return { section: null, item: null };
+    }
+
+    function findOccupyingItem(section, dropPos, excludeItemId = null) {
+      if (!section || !dropPos) return null;
+      const targetCol = Math.max(1, dropPos.colStart || 1);
+      const targetRow = Math.max(1, dropPos.rowStart || 1);
+      return section.items.find(candidate => {
+        if (candidate.id === excludeItemId) return false;
+        const colStart = Math.max(1, parseInt(candidate.colStart || 1, 10) || 1);
+        const rowStart = Math.max(1, parseInt(candidate.rowStart || 1, 10) || 1);
+        const colSpan = Math.max(1, parseInt(candidate.colSpan || 1, 10) || 1);
+        const rowSpan = Math.max(1, parseInt(candidate.rowSpan || 1, 10) || 1);
+        return targetCol >= colStart && targetCol < colStart + colSpan && targetRow >= rowStart && targetRow < rowStart + rowSpan;
+      }) || null;
+    }
+
+    function moveOrSwapExistingItem(itemId, targetSectionId, dropPos) {
+      const targetSection = state.sections.find(section => section.id === targetSectionId);
+      const found = findSectionAndItem(itemId);
+      const sourceSection = found.section;
+      const draggedItem = found.item;
+      if (!targetSection || !sourceSection || !draggedItem || !dropPos) return;
+
+      const beforeMoveSnapshot = captureEditorSnapshot();
+      const oldSectionId = sourceSection.id;
+      const oldColStart = Math.max(1, parseInt(draggedItem.colStart || 1, 10) || 1);
+      const oldRowStart = Math.max(1, parseInt(draggedItem.rowStart || 1, 10) || 1);
+      const targetColStart = Math.max(1, dropPos.colStart || 1);
+      const targetRowStart = Math.max(1, dropPos.rowStart || 1);
+      const occupyingItem = findOccupyingItem(targetSection, { colStart: targetColStart, rowStart: targetRowStart }, draggedItem.id);
+
+      if (occupyingItem) {
+        if (sourceSection.id !== targetSection.id) {
+          sourceSection.items = sourceSection.items.filter(item => item.id !== draggedItem.id);
+          targetSection.items = targetSection.items.filter(item => item.id !== occupyingItem.id);
+          draggedItem.colStart = targetColStart;
+          draggedItem.rowStart = targetRowStart;
+          occupyingItem.colStart = oldColStart;
+          occupyingItem.rowStart = oldRowStart;
+          targetSection.items.push(draggedItem);
+          sourceSection.items.push(occupyingItem);
+        } else {
+          draggedItem.colStart = Math.max(1, parseInt(occupyingItem.colStart || 1, 10) || 1);
+          draggedItem.rowStart = Math.max(1, parseInt(occupyingItem.rowStart || 1, 10) || 1);
+          occupyingItem.colStart = oldColStart;
+          occupyingItem.rowStart = oldRowStart;
+        }
+      } else {
+        if (sourceSection.id !== targetSection.id) {
+          sourceSection.items = sourceSection.items.filter(item => item.id !== draggedItem.id);
+          targetSection.items.push(draggedItem);
+        }
+        draggedItem.colStart = targetColStart;
+        draggedItem.rowStart = targetRowStart;
+      }
+
+      state.selected = { sectionId: targetSection.id, itemId: draggedItem.id };
+      render();
+      if (!snapshotsEqual(beforeMoveSnapshot, captureEditorSnapshot())) {
+        commitHistory(oldSectionId === targetSection.id ? 'move item' : 'move item between sections');
+        scheduleAutoSave();
+      }
+    }
+
     function deleteSelected() {
       const beforeDeleteSnapshot = captureEditorSnapshot();
       if (state.selected.itemId) {
@@ -4642,118 +4708,6 @@ ${renderCellFitGroup(item)}
       });
     }
 
-
-    function isPaletteDragType(value) {
-      return value === 'card' || value === 'hero' || value === 'menu' || value === 'form' || value === 'image';
-    }
-
-    function clampMovedItemToSection(item, section) {
-      if (!item || !section) return;
-      const cols = Math.max(1, Math.min(12, countTemplateTracks(section.columns, 2)));
-      const rows = Math.max(1, Math.min(8, countTemplateTracks(section.rows, 1)));
-      const colSpan = Math.max(1, Math.min(cols, parseInt(item.colSpan || 1, 10) || 1));
-      const rowSpan = Math.max(1, parseInt(item.rowSpan || 1, 10) || 1);
-      item.colSpan = colSpan;
-      item.rowSpan = rowSpan;
-      item.colStart = Math.max(1, Math.min(parseInt(item.colStart || 1, 10) || 1, Math.max(1, cols - colSpan + 1)));
-      item.rowStart = Math.max(1, Math.min(parseInt(item.rowStart || 1, 10) || 1, rows));
-      if ((item.positionMode || 'grid') !== 'absolute') {
-        item.positionMode = 'grid';
-      }
-    }
-
-    function cellContainsGridPoint(item, colStart, rowStart) {
-      if (!item || (item.positionMode || 'grid') === 'absolute') return false;
-      const itemColStart = Math.max(1, parseInt(item.colStart || 1, 10) || 1);
-      const itemRowStart = Math.max(1, parseInt(item.rowStart || 1, 10) || 1);
-      const itemColSpan = Math.max(1, parseInt(item.colSpan || 1, 10) || 1);
-      const itemRowSpan = Math.max(1, parseInt(item.rowSpan || 1, 10) || 1);
-      return colStart >= itemColStart && colStart < itemColStart + itemColSpan && rowStart >= itemRowStart && rowStart < itemRowStart + itemRowSpan;
-    }
-
-    function findItemOccupyingCell(section, colStart, rowStart, excludeItemId = null) {
-      if (!section || !Array.isArray(section.items)) return null;
-      return section.items.find(item => item.id !== excludeItemId && cellContainsGridPoint(item, colStart, rowStart)) || null;
-    }
-
-    function moveExistingItemToSectionCell(payload, targetSectionId, dropPos) {
-      if (!payload || !payload.sectionId || !payload.itemId || !targetSectionId) return false;
-      const sourceSection = state.sections.find(section => section.id === payload.sectionId);
-      const targetSection = state.sections.find(section => section.id === targetSectionId);
-      if (!sourceSection || !targetSection) return false;
-      const fromIndex = sourceSection.items.findIndex(item => item.id === payload.itemId);
-      if (fromIndex < 0) return false;
-      const beforeMoveSnapshot = captureEditorSnapshot();
-      const item = sourceSection.items[fromIndex];
-      const sourcePos = {
-        colStart: Math.max(1, parseInt(item.colStart || 1, 10) || 1),
-        rowStart: Math.max(1, parseInt(item.rowStart || 1, 10) || 1)
-      };
-      const targetPos = {
-        colStart: Math.max(1, parseInt((dropPos && dropPos.colStart) || 1, 10) || 1),
-        rowStart: Math.max(1, parseInt((dropPos && dropPos.rowStart) || 1, 10) || 1)
-      };
-
-      // If the destination cell is occupied, swap the two components instead of stacking them.
-      const occupyingItem = findItemOccupyingCell(targetSection, targetPos.colStart, targetPos.rowStart, item.id);
-      if (occupyingItem) {
-        const targetOriginalPos = {
-          colStart: Math.max(1, parseInt(occupyingItem.colStart || targetPos.colStart, 10) || targetPos.colStart),
-          rowStart: Math.max(1, parseInt(occupyingItem.rowStart || targetPos.rowStart, 10) || targetPos.rowStart)
-        };
-
-        if (sourceSection.id !== targetSection.id) {
-          sourceSection.items.splice(fromIndex, 1);
-          const occupantIndex = targetSection.items.findIndex(candidate => candidate.id === occupyingItem.id);
-          if (occupantIndex >= 0) targetSection.items.splice(occupantIndex, 1);
-          occupyingItem.colStart = sourcePos.colStart;
-          occupyingItem.rowStart = sourcePos.rowStart;
-          occupyingItem.positionMode = 'grid';
-          occupyingItem.absX = 0;
-          occupyingItem.absY = 0;
-          clampMovedItemToSection(occupyingItem, sourceSection);
-          sourceSection.items.push(occupyingItem);
-          item.colStart = targetOriginalPos.colStart;
-          item.rowStart = targetOriginalPos.rowStart;
-          item.positionMode = 'grid';
-          item.absX = 0;
-          item.absY = 0;
-          clampMovedItemToSection(item, targetSection);
-          targetSection.items.push(item);
-        } else {
-          item.colStart = targetOriginalPos.colStart;
-          item.rowStart = targetOriginalPos.rowStart;
-          occupyingItem.colStart = sourcePos.colStart;
-          occupyingItem.rowStart = sourcePos.rowStart;
-          item.positionMode = 'grid';
-          occupyingItem.positionMode = 'grid';
-          item.absX = 0;
-          item.absY = 0;
-          occupyingItem.absX = 0;
-          occupyingItem.absY = 0;
-          clampMovedItemToSection(item, targetSection);
-          clampMovedItemToSection(occupyingItem, targetSection);
-        }
-      } else {
-        const [movedItem] = sourceSection.items.splice(fromIndex, 1);
-        movedItem.colStart = targetPos.colStart;
-        movedItem.rowStart = targetPos.rowStart;
-        movedItem.positionMode = 'grid';
-        movedItem.absX = 0;
-        movedItem.absY = 0;
-        clampMovedItemToSection(movedItem, targetSection);
-        targetSection.items.push(movedItem);
-      }
-
-      state.selected = { sectionId: targetSection.id, itemId: item.id };
-      render();
-      if (!snapshotsEqual(beforeMoveSnapshot, captureEditorSnapshot())) {
-        commitHistory(occupyingItem ? 'swap components' : 'move component between sections');
-        scheduleAutoSave();
-      }
-      return true;
-    }
-
     function buildSectionShell(section) {
       const shell = document.createElement('section');
       shell.className = 'section-shell' + (state.selected.sectionId === section.id && !state.selected.itemId ? ' selected' : '');
@@ -4792,28 +4746,24 @@ ${renderCellFitGroup(item)}
       addSectionDropGuides(grid, section);
       grid.addEventListener('dragover', e => {
         if (canvasSectionDragId) return;
-        if (canvasItemDrag || isPaletteDragType(dragType)) {
+        if (canvasItemDrag || dragType === 'card' || dragType === 'hero' || dragType === 'menu' || dragType === 'form' || dragType === 'image') {
           e.preventDefault();
-          e.dataTransfer.dropEffect = 'move';
           grid.classList.add('drop-target');
         }
       });
-      grid.addEventListener('dragleave', e => {
-        if (!grid.contains(e.relatedTarget)) grid.classList.remove('drop-target');
-      });
+      grid.addEventListener('dragleave', () => grid.classList.remove('drop-target'));
       grid.addEventListener('drop', e => {
         if (canvasSectionDragId) return;
-        if (canvasItemDrag) {
+        if (canvasItemDrag && canvasItemDrag.itemId) {
           e.preventDefault();
           e.stopPropagation();
           grid.classList.remove('drop-target');
-          const payload = canvasItemDrag;
+          moveOrSwapExistingItem(canvasItemDrag.itemId, section.id, getDropCellPosition(grid, e, section));
           canvasItemDrag = null;
           dragType = null;
-          moveExistingItemToSectionCell(payload, section.id, getDropCellPosition(grid, e, section));
           return;
         }
-        if (isPaletteDragType(dragType)) {
+        if (dragType === 'card' || dragType === 'hero' || dragType === 'menu' || dragType === 'form' || dragType === 'image') {
           e.preventDefault();
           grid.classList.remove('drop-target');
           addItem(dragType, section.id, getDropCellPosition(grid, e, section));
@@ -4831,6 +4781,24 @@ ${renderCellFitGroup(item)}
         section.items.forEach(item => {
           const itemShell = document.createElement('div');
           itemShell.className = 'item-shell' + (state.selected.itemId === item.id ? ' selected' : '');
+          if ((item.positionMode || 'grid') !== 'absolute') {
+            itemShell.draggable = true;
+            itemShell.addEventListener('dragstart', e => {
+              e.stopPropagation();
+              canvasItemDrag = { sectionId: section.id, itemId: item.id };
+              dragType = null;
+              itemShell.classList.add('canvas-item-dragging');
+              try {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', item.id);
+              } catch (_) {}
+            });
+            itemShell.addEventListener('dragend', () => {
+              canvasItemDrag = null;
+              itemShell.classList.remove('canvas-item-dragging');
+              document.querySelectorAll('.section-grid.drop-target').forEach(el => el.classList.remove('drop-target'));
+            });
+          }
           itemShell.style.zIndex = String(item.zIndex || 1);
           itemShell.style.opacity = String((Number.isFinite(item.opacity) ? item.opacity : 100) / 100);
           if ((item.positionMode || 'grid') === 'absolute') {
@@ -4865,24 +4833,6 @@ ${renderCellFitGroup(item)}
             itemShell.style.justifySelf = 'stretch';
             itemShell.style.touchAction = '';
           }
-          itemShell.draggable = (item.positionMode || 'grid') !== 'absolute';
-          itemShell.title = ((item.type || 'component').replace(/^./, c => c.toUpperCase())) + ' — drag to move between grid cells or sections';
-          itemShell.addEventListener('dragstart', event => {
-            if ((item.positionMode || 'grid') === 'absolute') return;
-            event.stopPropagation();
-            canvasItemDrag = { sectionId: section.id, itemId: item.id };
-            canvasSectionDragId = null;
-            dragType = null;
-            event.dataTransfer.setData('text/plain', 'item-move:' + item.id);
-            event.dataTransfer.setData('application/x-editor-item', JSON.stringify(canvasItemDrag));
-            event.dataTransfer.effectAllowed = 'move';
-            itemShell.classList.add('canvas-item-dragging');
-          });
-          itemShell.addEventListener('dragend', () => {
-            canvasItemDrag = null;
-            itemShell.classList.remove('canvas-item-dragging');
-            document.querySelectorAll('.section-grid.drop-target').forEach(node => node.classList.remove('drop-target'));
-          });
           itemShell.onclick = e => { e.stopPropagation(); selectItem(section.id, item.id); };
           itemShell.onpointerdown = e => {
             if ((item.positionMode || 'grid') !== 'absolute') return;
