@@ -835,6 +835,37 @@ body:not([data-theme="dark"]) #designSystemModal #dsCloseTop {
     }
 
 
+    /* Text Box numeric property controls */
+    .numeric-control {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      margin-top: 4px;
+    }
+    .numeric-control input[type=number] {
+      width: 100%;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .numeric-unit {
+      min-width: 42px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+      user-select: none;
+    }
+    body[data-theme="dark"] .numeric-unit {
+      color: #ffffff;
+      border-color: rgba(255,255,255,.22);
+    }
+
+
     /* Canvas section controls */
     .canvas-section-actions {
       position: absolute;
@@ -933,6 +964,25 @@ body:not([data-theme="dark"]) #designSystemModal #dsCloseTop {
       max-height: 220px;
     }
 
+
+
+    /* Properties panel independent vertical scrolling */
+    #right {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      height: calc(100vh - 0px);
+      min-height: 0;
+    }
+    #rightPanelWrap {
+      height: calc(100vh - 120px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+      padding-right: 4px;
+    }
+    #rightPanel {
+      min-height: 0;
+    }
 </style>
 </head>
 <body>
@@ -3918,6 +3968,49 @@ body:not([data-theme="dark"]) #designSystemModal #dsCloseTop {
       }
     }
 
+
+    function parseNumericCssValue(raw, fallbackValue, fallbackUnit) {
+      const source = String(raw ?? '').trim();
+      const match = source.match(/^(-?\d+(?:\.\d+)?|-?\.\d+)([a-z%]*)$/i);
+      if (match) {
+        return { value: match[1], unit: match[2] || fallbackUnit || '' };
+      }
+      return { value: String(fallbackValue ?? 0), unit: fallbackUnit || '' };
+    }
+
+    function renderNumericControl(id, label, rawValue, options = {}) {
+      const unit = options.unit || '';
+      const parsed = parseNumericCssValue(rawValue, options.fallback ?? 0, unit);
+      const step = options.step ?? 1;
+      const min = options.min;
+      const max = options.max;
+      const attrs = [
+        `id="${escapeAttr(id)}"`,
+        'type="number"',
+        `step="${escapeAttr(step)}"`,
+        `value="${escapeAttr(parsed.value)}"`,
+        `data-css-unit="${escapeAttr(unit)}"`
+      ];
+      if (min !== undefined) attrs.push(`min="${escapeAttr(min)}"`);
+      if (max !== undefined) attrs.push(`max="${escapeAttr(max)}"`);
+      return `
+        <label style="margin-top:10px;">${escapeHTML(label)}</label>
+        <div class="numeric-control">
+          <input ${attrs.join(' ')}>
+          <span class="numeric-unit">${escapeHTML(unit || 'num')}</span>
+        </div>`;
+    }
+
+    function getPropertyControlValue(el) {
+      if (!el) return '';
+      const unit = el.dataset ? (el.dataset.cssUnit || '') : '';
+      if (el.type === 'number' && unit) {
+        const raw = String(el.value ?? '').trim();
+        return raw === '' ? '' : raw + unit;
+      }
+      return el.value;
+    }
+
     function renderRightPanel() {
       const section = getSelectedSection();
       const item = getSelectedItem();
@@ -3993,8 +4086,8 @@ body:not([data-theme="dark"]) #designSystemModal #dsCloseTop {
             <select id="textJustify">
               ${['flex-start','center','flex-end','space-between'].map(v => `<option value="${v}" ${(textStyles.justify || 'flex-start') === v ? 'selected' : ''}>${v}</option>`).join('')}
             </select>
-            <label style="margin-top:10px;">Max width</label><input id="textMaxWidth" value="${escapeAttr(textStyles.maxWidth || '720px')}">
-            <label style="margin-top:10px;">Padding</label><input id="textPadding" value="${escapeAttr(textStyles.padding || '24px')}">
+            ${renderNumericControl('textMaxWidth', 'Max width', textStyles.maxWidth || '720px', { unit: 'px', fallback: 720, min: 0, step: 1 })}
+            ${renderNumericControl('textPadding', 'Padding', textStyles.padding || '24px', { unit: 'px', fallback: 24, min: 0, step: 1 })}
           </div>
           <div class="group">
             <h4>Appearance</h4>
@@ -4005,7 +4098,7 @@ body:not([data-theme="dark"]) #designSystemModal #dsCloseTop {
             <label style="margin-top:10px;">Eyebrow color</label><input id="textEyebrowColor" value="${escapeAttr(textStyles.eyebrowColor || '#4f46e5')}">
             <label style="margin-top:10px;">Button background</label><input id="textButtonBg" value="${escapeAttr(textStyles.buttonBg || '#4f46e5')}">
             <label style="margin-top:10px;">Button text</label><input id="textButtonText" value="${escapeAttr(textStyles.buttonText || '#ffffff')}">
-            <label style="margin-top:10px;">Radius</label><input id="textRadius" value="${escapeAttr(textStyles.radius || '16px')}">
+            ${renderNumericControl('textRadius', 'Radius', textStyles.radius || '16px', { unit: 'px', fallback: 16, min: 0, step: 1 })}
             <label style="margin-top:10px;">Shadow</label><input id="textShadow" value="${escapeAttr(textStyles.shadow || 'none')}">
           </div>
           <div class="group">
@@ -4014,20 +4107,20 @@ body:not([data-theme="dark"]) #designSystemModal #dsCloseTop {
             <select id="textFontFamily">
               ${['Inter, system-ui, Arial, sans-serif','Arial, sans-serif','Georgia, serif',"'Helvetica Neue', Helvetica, Arial, sans-serif","'Segoe UI', Tahoma, Geneva, Verdana, sans-serif","'Times New Roman', Times, serif"].map(v => `<option value="${escapeAttr(v)}" ${(textStyles.fontFamily || '').trim() === v ? 'selected' : ''}>${escapeHTML(v)}</option>`).join('')}
             </select>
-            <label style="margin-top:10px;">Eyebrow size</label><input id="textEyebrowSize" value="${escapeAttr(textStyles.eyebrowSize || '13px')}">
-            <label style="margin-top:10px;">Heading size</label><input id="textHeadingSize" value="${escapeAttr(textStyles.headingSize || '36px')}">
-            <label style="margin-top:10px;">Body size</label><input id="textBodySize" value="${escapeAttr(textStyles.bodySize || '17px')}">
-            <label style="margin-top:10px;">Button size</label><input id="textButtonSize" value="${escapeAttr(textStyles.buttonSize || '14px')}">
-            <label style="margin-top:10px;">Eyebrow weight</label><input id="textEyebrowWeight" value="${escapeAttr(textStyles.eyebrowWeight || '800')}">
-            <label style="margin-top:10px;">Heading weight</label><input id="textHeadingWeight" value="${escapeAttr(textStyles.headingWeight || '850')}">
-            <label style="margin-top:10px;">Body weight</label><input id="textBodyWeight" value="${escapeAttr(textStyles.bodyWeight || '400')}">
-            <label style="margin-top:10px;">Button weight</label><input id="textButtonWeight" value="${escapeAttr(textStyles.buttonWeight || '800')}">
-            <label style="margin-top:10px;">Heading line height</label><input id="textHeadingLineHeight" value="${escapeAttr(textStyles.headingLineHeight || '1.08')}">
-            <label style="margin-top:10px;">Body line height</label><input id="textLineHeight" value="${escapeAttr(textStyles.lineHeight || '1.55')}">
-            <label style="margin-top:10px;">Heading letter spacing</label><input id="textHeadingLetterSpacing" value="${escapeAttr(textStyles.headingLetterSpacing || '-.03em')}">
-            <label style="margin-top:10px;">Body letter spacing</label><input id="textBodyLetterSpacing" value="${escapeAttr(textStyles.bodyLetterSpacing || 'normal')}">
-            <label style="margin-top:10px;">Eyebrow letter spacing</label><input id="textEyebrowLetterSpacing" value="${escapeAttr(textStyles.eyebrowLetterSpacing || '.08em')}">
-            <label style="margin-top:10px;">Button letter spacing</label><input id="textButtonLetterSpacing" value="${escapeAttr(textStyles.buttonLetterSpacing || 'normal')}">
+            ${renderNumericControl('textEyebrowSize', 'Eyebrow size', textStyles.eyebrowSize || '13px', { unit: 'px', fallback: 13, min: 6, step: 1 })}
+            ${renderNumericControl('textHeadingSize', 'Heading size', textStyles.headingSize || '36px', { unit: 'px', fallback: 36, min: 8, step: 1 })}
+            ${renderNumericControl('textBodySize', 'Body size', textStyles.bodySize || '17px', { unit: 'px', fallback: 17, min: 8, step: 1 })}
+            ${renderNumericControl('textButtonSize', 'Button size', textStyles.buttonSize || '14px', { unit: 'px', fallback: 14, min: 8, step: 1 })}
+            ${renderNumericControl('textEyebrowWeight', 'Eyebrow weight', textStyles.eyebrowWeight || '800', { fallback: 800, min: 100, max: 1000, step: 50 })}
+            ${renderNumericControl('textHeadingWeight', 'Heading weight', textStyles.headingWeight || '850', { fallback: 850, min: 100, max: 1000, step: 50 })}
+            ${renderNumericControl('textBodyWeight', 'Body weight', textStyles.bodyWeight || '400', { fallback: 400, min: 100, max: 1000, step: 50 })}
+            ${renderNumericControl('textButtonWeight', 'Button weight', textStyles.buttonWeight || '800', { fallback: 800, min: 100, max: 1000, step: 50 })}
+            ${renderNumericControl('textHeadingLineHeight', 'Heading line height', textStyles.headingLineHeight || '1.08', { fallback: 1.08, min: 0.8, max: 3, step: 0.01 })}
+            ${renderNumericControl('textLineHeight', 'Body line height', textStyles.lineHeight || '1.55', { fallback: 1.55, min: 0.8, max: 3, step: 0.01 })}
+            ${renderNumericControl('textHeadingLetterSpacing', 'Heading letter spacing', textStyles.headingLetterSpacing || '-.03em', { unit: 'em', fallback: -0.03, min: -0.2, max: 1, step: 0.01 })}
+            ${renderNumericControl('textBodyLetterSpacing', 'Body letter spacing', textStyles.bodyLetterSpacing || '0em', { unit: 'em', fallback: 0, min: -0.2, max: 1, step: 0.01 })}
+            ${renderNumericControl('textEyebrowLetterSpacing', 'Eyebrow letter spacing', textStyles.eyebrowLetterSpacing || '.08em', { unit: 'em', fallback: 0.08, min: -0.2, max: 1, step: 0.01 })}
+            ${renderNumericControl('textButtonLetterSpacing', 'Button letter spacing', textStyles.buttonLetterSpacing || '0em', { unit: 'em', fallback: 0, min: -0.2, max: 1, step: 0.01 })}
             <label style="margin-top:10px;">Heading style</label><select id="textHeadingStyle">${['normal','italic','oblique'].map(v => `<option value="${v}" ${(textStyles.headingStyle || 'normal') === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
             <label style="margin-top:10px;">Body style</label><select id="textBodyStyle">${['normal','italic','oblique'].map(v => `<option value="${v}" ${(textStyles.bodyStyle || 'normal') === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
             <label style="margin-top:10px;">Heading decoration</label><select id="textHeadingDecoration">${['none','underline','line-through','overline'].map(v => `<option value="${v}" ${(textStyles.headingDecoration || 'none') === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
@@ -4056,8 +4149,8 @@ body:not([data-theme="dark"]) #designSystemModal #dsCloseTop {
           const el = document.getElementById('text' + key);
           if (!el) return;
           const prop = key.charAt(0).toLowerCase() + key.slice(1);
-          el.oninput = e => { activeTextTokenSet[prop] = e.target.value; renderCanvas(); scheduleAutoSave(); };
-          el.onchange = e => { activeTextTokenSet[prop] = e.target.value; renderCanvas(); renderRightPanel(); scheduleAutoSave(); };
+          el.oninput = e => { activeTextTokenSet[prop] = getPropertyControlValue(e.target); renderCanvas(); scheduleAutoSave(); };
+          el.onchange = e => { activeTextTokenSet[prop] = getPropertyControlValue(e.target); renderCanvas(); renderRightPanel(); scheduleAutoSave(); };
         });
         document.getElementById('textMode').onchange = e => { item.mode = e.target.value === 'brand' ? 'brand' : e.target.value === 'custom' ? 'custom' : 'default'; item.tokenSet = item.mode; renderCanvas(); renderRightPanel(); scheduleAutoSave(); };
         document.getElementById('openTextTokens').onclick = () => openDesignSystemModal('text', textConfig.tokenSet || 'default');
