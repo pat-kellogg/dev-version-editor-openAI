@@ -229,16 +229,20 @@
     font-size: 11px; font-weight: 900;
   }
   .drop-hint {
-    grid-column: 1 / -1;
-    grid-row: span 1;
-    z-index: 2;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(520px, calc(100% - 48px));
+    z-index: 4;
     border: 1px dashed var(--border);
     border-radius: 18px;
     padding: 18px;
     color: var(--muted);
-    background: #f8fafc;
+    background: rgba(248,250,252,.94);
     text-align: center;
     font-size: 13px;
+    box-shadow: 0 12px 28px rgba(15,23,42,.08);
   }
   .demo-block { position: relative; z-index: 2; border-radius: var(--radius); overflow: hidden; min-width: 0; align-self: stretch; box-shadow: 0 1px 2px rgba(15,23,42,.06); border: 1px solid var(--border); background: #fff; cursor: grab; }
   .demo-block:active { cursor: grabbing; }
@@ -320,7 +324,7 @@
   .screenshot-modal-body img { width: 100%; height: auto; display: block; border-radius: 16px; }
 
   @media (max-width: 1050px) { .shell { grid-template-columns: 1fr; overflow: auto; } body { overflow: auto; } .panel { max-height: none; } .canvas { min-height: 620px; } }
-  @media (max-width: 720px) { .topbar { grid-template-columns: 1fr; } .top-feature-list { gap: 7px 10px; } .actions { justify-content: flex-start; } .canvas-meta { align-items: flex-start; flex-direction: column; } .canvas-meta-actions { justify-content: flex-start; } .hero, .card, .image, .text { grid-column: 1 / -1; } .card { height: auto; min-height: 280px; } .card.card-left, .card.card-right { grid-template-columns: 1fr; grid-template-rows: 118px minmax(0,1fr); } .hero { padding: 34px 22px; } }
+  @media (max-width: 720px) { .topbar { grid-template-columns: 1fr; } .top-feature-list { gap: 7px 10px; } .actions { justify-content: flex-start; } .canvas-meta { align-items: flex-start; flex-direction: column; } .canvas-meta-actions { justify-content: flex-start; } .card { min-height: 0; } .card.card-left, .card.card-right { grid-template-columns: 1fr; grid-template-rows: 118px minmax(0,1fr); } .hero { padding: 24px 18px; } }
 </style>
 </head>
 <body>
@@ -363,9 +367,9 @@
         <div class="group">
           <div class="group-title">Section Presets</div>
           <div class="preset-grid">
-            <button class="preset" data-preset="landing"><strong>Landing page</strong><span>Hero, cards, visual split</span></button>
-            <button class="preset" data-preset="cards"><strong>Card grid</strong><span>Three structured cards</span></button>
-            <button class="preset" data-preset="split"><strong>Content split</strong><span>Text and visual balance</span></button>
+            <button type="button" class="preset" data-preset="landing"><strong>Landing page</strong><span>Hero, cards, visual split</span></button>
+            <button type="button" class="preset" data-preset="cards"><strong>Card grid</strong><span>Three structured cards</span></button>
+            <button type="button" class="preset" data-preset="split"><strong>Content split</strong><span>Text and visual balance</span></button>
           </div>
         </div>
       </div>
@@ -454,6 +458,15 @@
 
   function ensureMarker() {
     if (!canvas.contains(marker)) canvas.appendChild(marker);
+  }
+
+  function clearCanvasContents() {
+    selected = null;
+    draggedExistingId = null;
+    canvas.classList.remove('drag-ready');
+    canvas.querySelectorAll('.demo-block, .drop-hint, .grid-cell-bg').forEach(el => el.remove());
+    marker.style.cssText = '';
+    ensureMarker();
   }
 
   function renderGridCells() {
@@ -649,14 +662,36 @@
   }
 
   function loadPreset(name) {
+    const presetName = name || 'landing';
+    const presets = {
+      landing: [
+        { type: 'hero', col: 1, row: 1 },
+        { type: 'card', col: 2, row: 1 },
+        { type: 'image', col: 1, row: 2 },
+        { type: 'text', col: 2, row: 2 }
+      ],
+      cards: [
+        { type: 'card', col: 1, row: 1 },
+        { type: 'card', col: 2, row: 1 },
+        { type: 'card', col: 1, row: 2 },
+        { type: 'card', col: 2, row: 2 }
+      ],
+      split: [
+        { type: 'text', col: 1, row: 1 },
+        { type: 'image', col: 2, row: 1 },
+        { type: 'card', col: 1, row: 2 },
+        { type: 'card', col: 2, row: 2 }
+      ]
+    };
+
     cardCounter = 0;
-    canvas.innerHTML = '';
-    document.querySelectorAll('.preset').forEach(p => p.classList.toggle('active', p.dataset.preset === name));
-    if (name === 'landing') ['hero','card','image','text'].forEach(add);
-    if (name === 'cards') ['card','card','card','card'].forEach(add);
-    if (name === 'split') ['text','image','card','card'].forEach(add);
+    clearCanvasContents();
+    document.querySelectorAll('.preset').forEach(p => p.classList.toggle('active', p.dataset.preset === presetName));
+    (presets[presetName] || presets.landing).forEach(item => add(item.type, { col: item.col, row: item.row }));
+    canvas.querySelectorAll('.demo-block').forEach(el => el.classList.remove('selected'));
     selected = null;
     updateCount();
+    requestAnimationFrame(renderGridCells);
   }
 
   document.querySelectorAll('.component-card').forEach(card => {
@@ -698,18 +733,18 @@
     canvas.classList.remove('drag-ready');
     updateCount();
   });
-  document.querySelectorAll('.preset').forEach(p => p.addEventListener('click', () => loadPreset(p.dataset.preset)));
+  document.querySelectorAll('.preset').forEach(p => p.addEventListener('click', event => {
+    event.preventDefault();
+    loadPreset(p.dataset.preset);
+  }));
 
   document.getElementById('addHero').addEventListener('click', () => add('hero'));
   document.getElementById('addCard').addEventListener('click', () => add('card'));
   document.getElementById('addImage').addEventListener('click', () => add('image'));
   document.getElementById('addText').addEventListener('click', () => add('text'));
-  document.getElementById('clearCanvas').addEventListener('click', () => { canvas.innerHTML = ''; selected = null; updateCount(); });
+  document.getElementById('clearCanvas').addEventListener('click', () => { clearCanvasContents(); updateCount(); });
   document.getElementById('resetDemo').addEventListener('click', event => {
     event.preventDefault();
-    selected = null;
-    cardCounter = 0;
-    canvas.innerHTML = '';
     loadPreset('landing');
     const wrap = document.querySelector('.canvas-wrap');
     if (wrap) { wrap.scrollTop = 0; wrap.scrollLeft = 0; }
@@ -811,7 +846,7 @@
         if (this.shadowRoot) return;
         const root = this.attachShadow({ mode: 'open' });
         root.innerHTML = \
-          '<style>:host{display:block}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(310px,auto));grid-auto-rows:minmax(310px,auto);gap:18px;align-content:start;align-items:stretch}::slotted(*){min-width:0}@media(max-width:760px){::slotted(sd-hero),::slotted(sd-info-card),::slotted(sd-image-block),::slotted(sd-text-feature){grid-column:1 / -1 !important;grid-row:auto / span 1 !important}}</style><div class="grid"><slot></slot></div>';
+          '<style>:host{display:block}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(310px,auto));grid-auto-rows:minmax(310px,auto);gap:18px;align-content:start;align-items:stretch}::slotted(*){min-width:0}@media(max-width:520px){::slotted(sd-hero),::slotted(sd-info-card),::slotted(sd-image-block),::slotted(sd-text-feature){grid-column:1 / -1 !important;grid-row:auto / span 1 !important}}</style><div class="grid"><slot></slot></div>';
       }
     }
     customElements.define('sd-export-grid', SdExportGrid);
@@ -888,4 +923,4 @@
 })();
 </script>
 </body>
-</html>
+</html
