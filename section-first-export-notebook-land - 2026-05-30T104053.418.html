@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Section First Export</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { background: #ffffff !important; }
+    body { margin: 0; font-family: Inter, system-ui, Arial, sans-serif; background: #ffffff !important; color: #1f2937; }
+    main { width: min(1024px, calc(100% - 32px)); margin: 24px auto; display: flex; flex-direction: column; gap: 24px; }
+    .section-grid { display: grid; position: relative; isolation: isolate; min-height: 120px; }
+    ui-cell { display:block; position: relative; min-width: 0; min-height: 0; overflow:visible; }
+    ui-cell[fit="content"], ui-cell:not([fit]) { height:auto; overflow:visible; align-self:start; }
+    ui-cell[fit="clip"], ui-cell[fit="scroll"], ui-cell[fit="scale"] { height:100%; max-height:100%; }
+    ui-cell[fit="scale"] { overflow:hidden; }
+    ui-slot-item { display:block; width:100%; min-width:0; min-height:0; }
+    ui-slot-item[fit="scale"] { height:100%; max-height:100%; overflow:hidden; }
+    ui-cell[fit="scale"] > editor-info-card,
+    ui-cell[fit="scale"] > editor-hero,
+    ui-cell[fit="scale"] > editor-menu,
+    ui-cell[fit="scale"] > editor-form,
+    ui-cell[fit="scale"] > editor-image,
+    ui-cell[fit="scale"] > editor-container,
+    ui-cell[fit="scale"] > editor-text,
+    ui-cell[fit="scale"] > editor-button,
+    ui-cell[fit="scale"] > .import-html-preview { transform-origin: top left; display:block; }
+    .import-html-preview, [data-component-type="import-html"] { width:100%; max-width:100%; min-height:120px; padding:16px; border:1px solid #dbe4ee; border-radius:16px; background:#ffffff; overflow:auto; box-shadow:0 1px 2px rgba(15,23,42,.05); }
+    .import-html-label { display:inline-flex; margin-bottom:10px; padding:4px 8px; border:1px solid #dbe4ee; border-radius:999px; color:#4f46e5; background:rgba(79,70,229,.12); font-size:11px; font-weight:900; line-height:1; font-family:Inter,system-ui,sans-serif; }
+    .import-html-preview > .import-html-content { max-width:100%; overflow:auto; }
+    .import-html-preview img, .import-html-preview svg, .import-html-preview video, .import-html-preview canvas { max-width:100%; height:auto; }
+    ui-cell > editor-info-card, ui-cell > editor-hero, ui-cell > editor-menu, ui-cell > editor-form, ui-cell > editor-image, ui-cell > editor-container, ui-cell > editor-text, ui-cell > editor-button { display:block; width:100%; height:auto; min-width:0; min-height:0; overflow:visible; }
+    ui-cell[fit="clip"] > editor-info-card, ui-cell[fit="clip"] > editor-hero, ui-cell[fit="clip"] > editor-menu, ui-cell[fit="clip"] > editor-form, ui-cell[fit="clip"] > editor-image, ui-cell[fit="clip"] > editor-container, ui-cell[fit="clip"] > editor-text, ui-cell[fit="clip"] > editor-button,
+    ui-cell[fit="scroll"] > editor-info-card, ui-cell[fit="scroll"] > editor-hero, ui-cell[fit="scroll"] > editor-menu, ui-cell[fit="scroll"] > editor-form, ui-cell[fit="scroll"] > editor-image, ui-cell[fit="scroll"] > editor-container, ui-cell[fit="scroll"] > editor-text, ui-cell[fit="scroll"] > editor-button,
+    ui-cell[fit="scale"] > editor-info-card, ui-cell[fit="scale"] > editor-hero, ui-cell[fit="scale"] > editor-menu, ui-cell[fit="scale"] > editor-form, ui-cell[fit="scale"] > editor-image, ui-cell[fit="scale"] > editor-container, ui-cell[fit="scale"] > editor-text, ui-cell[fit="scale"] > editor-button { height:100%; overflow:hidden; }
+    ui-slot-item > editor-info-card, ui-slot-item > editor-hero, ui-slot-item > editor-menu, ui-slot-item > editor-form, ui-slot-item > editor-image, ui-slot-item > editor-container, ui-slot-item > editor-text, ui-slot-item > editor-button { display:block; width:100%; max-width:100%; height:auto; min-width:0; min-height:0; box-sizing:border-box; }
+    ui-slot-item > editor-button[nested="true"] { width:max-content; max-width:100%; min-width:max-content; height:auto; overflow:visible; }
+    editor-info-card, editor-hero, editor-menu, editor-form, editor-image, editor-container, editor-text, editor-button { display:block; width:100%; max-width:100%; min-width:0; min-height:0; box-sizing:border-box; }
+    editor-image > .export-image-fallback { display:block; width:100%; height:100%; min-height:120px; object-fit:cover; }
+    ui-grid.section-grid { display: grid; position: relative; isolation: isolate; min-height: 120px; min-width: 0; align-items:start; }
+
+    /* Responsive export fallback: works even before custom elements finish upgrading. */
+    @media (max-width:900px){
+      ui-grid.section-grid[responsive-mode="tablet-2-mobile-1"]{grid-template-columns:var(--tablet-columns, repeat(2, minmax(0, 1fr))) !important;}
+      ui-grid.section-grid[responsive-mode="tablet-1"]{grid-template-columns:var(--mobile-columns, minmax(0, 1fr)) !important;}
+      ui-grid.section-grid[responsive-mode="tablet-2-mobile-1"] > ui-cell,
+      ui-grid.section-grid[responsive-mode="tablet-1"] > ui-cell{grid-column:auto / span 1 !important;grid-row:auto / span 1 !important;}
+    }
+    @media (max-width:640px){
+      ui-grid.section-grid[responsive-mode="tablet-2-mobile-1"],
+      ui-grid.section-grid[responsive-mode="tablet-1"],
+      ui-grid.section-grid[responsive-mode="mobile-1"]{grid-template-columns:var(--mobile-columns, minmax(0, 1fr)) !important;}
+      ui-grid.section-grid[responsive-mode="tablet-2-mobile-1"] > ui-cell,
+      ui-grid.section-grid[responsive-mode="tablet-1"] > ui-cell,
+      ui-grid.section-grid[responsive-mode="mobile-1"] > ui-cell{grid-column:auto / span 1 !important;grid-row:auto / span 1 !important;}
+    }
+
+    /* Left panel accordion groups: make major sections collapse/expand like Section Templates. */
+    #left .left-accordion-toggle {
+      width: 100%;
+      margin-top: 0;
+    }
+    #left .left-accordion-panel {
+      margin-top: 10px;
+      min-width: 0;
+    }
+    #left .left-accordion-panel.hidden {
+      display: none !important;
+    }
+    #left .left-accordion-toggle .palette-icon {
+      flex: 0 0 18px;
+    }
+
+  </style>
+</head>
+<body>
+  <!-- Export verification report | Status: PASS | Export source marker: present | Normalized model component nodes: 3 | Exported authored component nodes: 3 | Normalized fit modes: content:3, clip:0, scroll:0, scale:0 | Exported fit modes: content:3, clip:0, scroll:0, scale:0 | Export fit mismatches: none | Missing node IDs in export: none | Extra node IDs in export: none | Duplicate normalized node IDs: none | Duplicate exported node IDs: none | Editor-only wrapper leakage: none | Layout wrappers intentionally exported: 4 | Rule: verification compares authored component hosts only; sections and layout wrappers are tracked separately. | Fit rule: export wrapper fit attributes must match normalized model cellFit values. -->
+  <main data-export-source="normalized-authored-model" data-node-role="model-generated">
+    
+      <section data-node-id="section-49" data-node-role="authored" data-node-type="layout-container" data-layout-type="grid">
+        <ui-grid class="section-grid" data-node-id="section-49" data-node-role="layout-wrapper" data-node-type="layout-container" data-layout-type="grid" columns="repeat(2, minmax(0, 1fr))" rows="minmax(320px, auto)" auto-rows="minmax(320px, auto)" gap="18px" responsive-mode="none" tablet-columns="repeat(2, minmax(0, 1fr))" mobile-columns="minmax(0, 1fr)" responsive-breakpoint="760" style="--tablet-columns:repeat(2, minmax(0, 1fr));--mobile-columns:minmax(0, 1fr);" responsive-preview="desktop">
+          <ui-cell data-node-id="item-212" data-node-role="layout-wrapper" data-parent-id="section-49" data-child-key="items" data-dom-role="grid-placement-cell" data-node-type="layout-wrapper" data-layout-type="grid-cell" data-component-type="container" data-component-tag="editor-container" col-start="1" row-start="1" span="1" row-span="1" fit="content" z="1" opacity="100"><editor-container data-node-id="item-212" data-node-role="authored" data-parent-id="section-49" data-child-key="items" data-dom-role="component-host" data-node-type="layout-container" data-layout-type="flex" data-component-type="container" data-component-tag="editor-container" cell-fit="content" title="Container / Stack" direction="column" gap="10px" align="center" justify="center" wrap="wrap" child-fit="auto" child-width="140px" child-min-width="120px" responsive-mode="none" overflow-mode="expand" padding="12px" surface="#ffffff" border-color="#dbe4ee" radius="16px" shadow="0 1px 2px rgba(15,23,42,.04)" min-height="72px"><ui-slot-item data-node-id="item-213" data-node-role="layout-wrapper" data-parent-id="item-212" data-child-key="children" data-dom-role="slot-composition-item" data-node-type="layout-wrapper" data-layout-type="slot-item" data-component-type="button" data-component-tag="editor-button" fit="content" style="min-height:0;;transform:translate(0px, 49px);transform-origin:center center"><editor-button data-node-id="item-213" data-node-role="authored" data-parent-id="item-212" data-child-key="children" data-dom-role="component-host" data-node-type="component" data-layout-type="" data-component-type="button" data-component-tag="editor-button" nested="true" cell-fit="content" label="Button" href="#" align="right" pin="none" mode="default" button-bg="#4f46e5" button-text="#ffffff" button-border="transparent" button-radius="999px" button-shadow="none" font-family="Inter, system-ui, Arial, sans-serif" button-size="14px" button-weight="800" button-letter-spacing="normal" button-style="normal" button-decoration="none" padding-x="18px" padding-y="12px"></editor-button></ui-slot-item><ui-slot-item data-node-id="item-216" data-node-role="layout-wrapper" data-parent-id="item-212" data-child-key="children" data-dom-role="slot-composition-item" data-node-type="layout-wrapper" data-layout-type="slot-item" data-component-type="image" data-component-tag="editor-image" fit="content" style="min-height:0;"><figure data-node-id="item-216" data-node-role="authored" data-parent-id="item-212" data-child-key="children" data-dom-role="component-host" data-node-type="component" data-layout-type="" data-component-type="image" data-component-tag="editor-image" data-export-render="plain-image" style="margin:0;display:block;width:100%;max-width:100%;overflow:hidden;border-radius:16px;box-shadow:0 1px 2px rgba(15,23,42,.04);background:linear-gradient(135deg,#dbeafe,#ede9fe);height:180px;min-height:0;"><img src="https://www.bing.com/th?id=OADD2.1269935933867737_1ELM8R08CIYV26E&amp;pid=21.2&amp;c=17&amp;roil=5e-04&amp;roit=0&amp;roir=1&amp;roib=1&amp;w=300&amp;h=157&amp;dynsize=1&amp;qlt=90&amp;dpr=2.00" alt="Image" style="display:block;width:100%;height:100%;object-fit:cover;border-radius:16px;" /></figure></ui-slot-item></editor-container></ui-cell>
+        </ui-grid>
+      </section>
+    
+  </main>
+  <script>
+    function escapeHTML(str) {
+      return String(str ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+    }
+    function escapeAttr(str) { return escapeHTML(str); }
+    function normalizeRadiusValue(value, fallback = '16px') {
+      const raw = String(value == null ? '' : value).trim();
+      if (!raw) return fallback;
+      if (/^-?d+(?:.d+)?$/.test(raw)) return raw + 'px';
+      if (/^-?d+(?:.d+)?(?:px|rem|em|%|vh|vw|vmin|vmax|ch|ex|cm|mm|in|pt|pc)$/i.test(raw)) return raw;
+      if (/^calc(.+)$/i.test(raw) || /^clamp(.+)$/i.test(raw) || /^min(.+)$/i.test(raw) || /^max(.+)$/i.test(raw)) return raw;
+      return fallback;
+    }
+    class UiGrid extends HTMLElement {
+      static get observedAttributes() { return ['columns','rows','auto-rows','gap','responsive-mode','tablet-columns','mobile-columns','responsive-breakpoint','responsive-preview']; }
+      constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+        this._onViewportResize = () => this.applyLayout();
+      }
+      connectedCallback() {
+        this.render();
+        this.applyLayout();
+        window.addEventListener('resize', this._onViewportResize);
+      }
+      disconnectedCallback() {
+        window.removeEventListener('resize', this._onViewportResize);
+      }
+      attributeChangedCallback() { this.render(); this.applyLayout(); }
+      responsiveState() {
+        const baseColumns = this.getAttribute('columns') || 'repeat(2, minmax(0, 1fr))';
+        const mode = ['none','tablet-2-mobile-1','mobile-1','tablet-1','custom-max'].includes(this.getAttribute('responsive-mode')) ? this.getAttribute('responsive-mode') : 'none';
+        const tabletColumns = this.getAttribute('tablet-columns') || 'repeat(2, minmax(0, 1fr))';
+        const mobileColumns = this.getAttribute('mobile-columns') || 'minmax(0, 1fr)';
+        const customBreakpoint = Math.max(320, Math.min(1600, parseInt(this.getAttribute('responsive-breakpoint') || '760', 10) || 760));
+        const preview = ['desktop','tablet','mobile'].includes(this.getAttribute('responsive-preview')) ? this.getAttribute('responsive-preview') : 'desktop';
+        const isEditorCanvas = !!this.closest('#canvas');
+        let columns = baseColumns;
+        let active = false;
+        if (mode !== 'none') {
+          if (isEditorCanvas) {
+            const preset = typeof getViewportPreset === 'function' ? getViewportPreset(currentViewportId) : null;
+            const previewWidth = Number(preset && preset.width) || (preview === 'mobile' ? 390 : preview === 'tablet' ? 834 : 1280);
+            if (mode === 'custom-max' && previewWidth <= customBreakpoint) {
+              columns = mobileColumns; active = true;
+            } else if (preview === 'mobile') {
+              columns = mobileColumns; active = true;
+            } else if (preview === 'tablet' && mode === 'tablet-1') {
+              columns = mobileColumns; active = true;
+            } else if (preview === 'tablet' && mode === 'tablet-2-mobile-1') {
+              columns = tabletColumns; active = true;
+            }
+          } else {
+            const width = Math.max(0, window.innerWidth || document.documentElement.clientWidth || 1200);
+            if (mode === 'custom-max' && width <= customBreakpoint) {
+              columns = mobileColumns; active = true;
+            } else if (width <= 640) {
+              columns = mobileColumns; active = true;
+            } else if (width <= 900 && mode === 'tablet-1') {
+              columns = mobileColumns; active = true;
+            } else if (width <= 900 && mode === 'tablet-2-mobile-1') {
+              columns = tabletColumns; active = true;
+            }
+          }
+        }
+        return { columns, active };
+      }
+      applyLayout() {
+        const state = this.responsiveState();
+        this.style.gridTemplateColumns = state.columns;
+        this.style.gridTemplateRows = this.getAttribute('rows') || 'minmax(320px, auto)';
+        this.style.gridAutoRows = this.getAttribute('auto-rows') || 'minmax(120px, auto)';
+        this.style.gap = this.getAttribute('gap') || '18px';
+        this.dataset.responsiveActive = state.active ? 'true' : 'false';
+        Array.from(this.children || []).forEach(child => {
+          if (child && child.tagName && child.tagName.toLowerCase() === 'ui-cell' && typeof child.applyLayout === 'function') child.applyLayout();
+        });
+      }
+      render() {
+        this.shadowRoot.innerHTML = '<style>:host{display:grid;position:relative;isolation:isolate;min-height:120px;min-width:0;align-items:start}slot{display:contents}</style><slot></slot>';
+      }
+    }
+    customElements.define('ui-grid', UiGrid);
+    class UiCell extends HTMLElement {
+      static get observedAttributes() { return ['col-start','row-start','span','row-span','fit','position-mode','x','y','w','h','z','opacity']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); this.applyLayout(); }
+      attributeChangedCallback() { this.applyLayout(); }
+      numAttr(name, fallback = 1) { const value = parseInt(this.getAttribute(name), 10); return Number.isFinite(value) && value > 0 ? value : fallback; }
+      pxAttr(name, fallback = 0) { const value = parseFloat(this.getAttribute(name)); return Number.isFinite(value) ? value : fallback; }
+      applyLayout() {
+        const fit = this.getAttribute('fit') || 'content';
+        const mode = this.getAttribute('position-mode') || 'grid';
+        const parentGrid = this.parentElement && this.parentElement.tagName && this.parentElement.tagName.toLowerCase() === 'ui-grid' ? this.parentElement : null;
+        const responsiveStacked = !!(parentGrid && parentGrid.dataset && parentGrid.dataset.responsiveActive === 'true');
+        this.dataset.cellFit = fit;
+        this.style.zIndex = String(this.numAttr('z', 1));
+        this.style.opacity = String(Math.max(0, Math.min(100, this.pxAttr('opacity', 100))) / 100);
+        if (mode === 'absolute' && !responsiveStacked) {
+          this.style.position = 'absolute'; this.style.left = this.pxAttr('x', 0) + 'px'; this.style.top = this.pxAttr('y', 0) + 'px';
+          this.style.width = this.pxAttr('w', 360) + 'px'; this.style.height = this.pxAttr('h', 260) + 'px';
+          this.style.gridColumn = 'auto'; this.style.gridRow = 'auto'; this.style.touchAction = 'none';
+        } else {
+          this.style.position = 'relative'; this.style.left = ''; this.style.top = ''; this.style.width = ''; this.style.height = '';
+          if (responsiveStacked) {
+            this.style.gridColumn = 'auto / span 1';
+            this.style.gridRow = 'auto / span 1';
+          } else {
+            this.style.gridColumn = this.numAttr('col-start', 1) + ' / span ' + this.numAttr('span', 1);
+            this.style.gridRow = this.numAttr('row-start', 1) + ' / span ' + this.numAttr('row-span', 1);
+          }
+          this.style.alignSelf = fit === 'content' ? 'start' : 'stretch'; this.style.justifySelf = 'stretch'; this.style.touchAction = '';
+        }
+      }
+      render() { this.shadowRoot.innerHTML = '<style>:host{display:block;position:relative;min-width:0;min-height:0;overflow:visible}:host([fit="content"]),:host(:not([fit])){height:auto;overflow:visible;align-self:start}:host([fit="clip"]),:host([fit="scroll"]),:host([fit="scale"]){height:100%;max-height:100%}:host([fit="scale"]){overflow:hidden}slot{display:contents}</style><slot></slot>'; }
+    }
+    customElements.define('ui-cell', UiCell);
+    class UiSlotItem extends HTMLElement {
+      static get observedAttributes() { return ['fit']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); this.applyLayout(); }
+      attributeChangedCallback() { this.applyLayout(); }
+      applyLayout() { this.dataset.cellFit = this.getAttribute('fit') || 'content'; }
+      render() { this.shadowRoot.innerHTML = '<style>:host{display:block;width:100%;min-width:0;min-height:0}:host([fit="scale"]){height:100%;max-height:100%;overflow:hidden}slot{display:contents}</style><slot></slot>'; }
+    }
+    customElements.define('ui-slot-item', UiSlotItem);
+    class EditorInfoCard extends HTMLElement {
+      static get observedAttributes() { return ['heading','body','cta','cta-visible','image-src','image-alt','mode','media-position','image-fit','media-height','media-behavior','overlay-mode','overlay-position','heading-nowrap','cell-fit','surface','border-color','heading-color','body-color','button-bg','button-text','card-radius','card-shadow','hero-radius','hero-shadow','font-family','heading-size','body-size','button-size','heading-weight','heading-line-height','body-weight','button-weight','line-height','heading-letter-spacing','body-letter-spacing','button-letter-spacing','heading-style','body-style','button-style','heading-decoration','body-decoration','button-decoration']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      render() {
+        const heading = this.getAttribute('heading') || 'Card Heading';
+        const body = this.getAttribute('body') || 'Card body text goes here.';
+        const cta = this.getAttribute('cta') || 'Learn More';
+        const ctaVisible = this.getAttribute('cta-visible') === 'off' ? 'off' : 'on';
+        const hasComposedButton = !!this.querySelector('editor-button, ui-slot-item editor-button, .nested-item-shell editor-button');
+        const imageSrc = this.getAttribute('image-src') || '';
+        const imageAlt = this.getAttribute('image-alt') || heading || 'Card image';
+        const mediaPosition = this.getAttribute('media-position') || 'top';
+        const isTextOnly = mediaPosition === 'none';
+        const imageFit = this.getAttribute('image-fit') || 'cover';
+        const mediaHeight = this.getAttribute('media-height') || '160px';
+        const mediaBehavior = this.getAttribute('media-behavior') || 'fixed-height';
+        const overlayMode = this.getAttribute('overlay-mode') === 'on' ? 'on' : 'off';
+        const overlayPosition = this.getAttribute('overlay-position') || 'bottom-left';
+        const isOverlay = overlayMode === 'on' && !isTextOnly;
+        const headingNoWrap = this.getAttribute('heading-nowrap') === 'on';
+        const cellFit = ['clip','scroll','scale'].includes(this.getAttribute('cell-fit')) ? this.getAttribute('cell-fit') : 'content';
+        const surface = this.getAttribute('surface') || '#ffffff';
+        const border = this.getAttribute('border-color') || '#dbe4ee';
+        const headingColor = this.getAttribute('heading-color') || '#0f172a';
+        const bodyColor = this.getAttribute('body-color') || '#64748b';
+        const buttonBg = this.getAttribute('button-bg') || '#4f46e5';
+        const buttonText = this.getAttribute('button-text') || '#ffffff';
+        const radius = normalizeRadiusValue(this.getAttribute('card-radius'), '16px');
+        const shadow = this.getAttribute('card-shadow') || '0 1px 2px rgba(15,23,42,.04)';
+        const fontFamily = this.getAttribute('font-family') || 'Inter, system-ui, Arial, sans-serif';
+        const headingSize = this.getAttribute('heading-size') || '20px';
+        const bodySize = this.getAttribute('body-size') || '16px';
+        const buttonSize = this.getAttribute('button-size') || '14px';
+        const headingWeight = this.getAttribute('heading-weight') || '700';
+        const headingLineHeight = this.getAttribute('heading-line-height') || '1.2';
+        const bodyWeight = this.getAttribute('body-weight') || '400';
+        const buttonWeight = this.getAttribute('button-weight') || '700';
+        const lineHeight = this.getAttribute('line-height') || '1.5';
+        const headingLetterSpacing = this.getAttribute('heading-letter-spacing') || 'normal';
+        const bodyLetterSpacing = this.getAttribute('body-letter-spacing') || 'normal';
+        const buttonLetterSpacing = this.getAttribute('button-letter-spacing') || 'normal';
+        const headingStyle = this.getAttribute('heading-style') || 'normal';
+        const bodyStyleAttr = this.getAttribute('body-style') || 'normal';
+        const buttonStyle = this.getAttribute('button-style') || 'normal';
+        const headingDecoration = this.getAttribute('heading-decoration') || 'none';
+        const bodyDecoration = this.getAttribute('body-decoration') || 'none';
+        const buttonDecoration = this.getAttribute('button-decoration') || 'none';
+
+        let articleStyle = 'display:grid; min-height:220px; height:auto; border:1px solid ' + border + '; border-radius:' + radius + '; background:' + surface + '; overflow:hidden; box-shadow:' + shadow + ';';
+        let mediaStyle = 'overflow:hidden; background: linear-gradient(135deg, #dbeafe, #ede9fe);';
+        let bodyStyle = 'padding:18px; display:flex; flex-direction:column; gap:10px; min-width:0;';
+        let mediaOrder = '';
+        let bodyOrder = '';
+
+        if (isOverlay) {
+          articleStyle = 'position:relative; display:block; width:100%; height:100%; min-height:220px; overflow:hidden; background:transparent; border:none; box-shadow:none; border-radius:' + radius + ';';
+          mediaStyle = 'display:block; width:100%; height:100%; overflow:hidden;';
+          if (mediaBehavior === 'aspect-ratio') {
+            mediaStyle += 'aspect-ratio:16 / 9;';
+          } else {
+            mediaStyle += 'min-height:' + mediaHeight + ';';
+          }
+          bodyStyle = 'position:absolute; z-index:2; display:flex; flex-direction:column; gap:10px; min-width:0; padding:0; background:transparent; border:none; box-shadow:none;' + (headingNoWrap ? 'max-width:none;' : 'max-width:min(92%, 640px);');
+          if (overlayPosition === 'top-left') bodyStyle += 'top:18px; left:18px;';
+          else if (overlayPosition === 'top-center') bodyStyle += 'top:18px; left:50%; transform:translateX(-50%); text-align:center; align-items:center;';
+          else if (overlayPosition === 'center') bodyStyle += 'top:50%; left:50%; transform:translate(-50%, -50%); text-align:center; align-items:center;';
+          else if (overlayPosition === 'bottom-center') bodyStyle += 'bottom:18px; left:50%; transform:translateX(-50%); text-align:center; align-items:center;';
+          else bodyStyle += 'bottom:18px; left:18px;';
+        } else if (isTextOnly) {
+          articleStyle += 'display:block;';
+        } else if (mediaPosition === 'left' || mediaPosition === 'right') {
+          articleStyle += 'grid-template-columns:minmax(140px, 42%) minmax(0, 1fr);';
+          mediaStyle += 'height:auto;';
+          if (mediaPosition === 'right') {
+            mediaOrder = 'order:2;';
+            bodyOrder = 'order:1;';
+          }
+        } else {
+          if (mediaBehavior === 'aspect-ratio') {
+            if (mediaPosition === 'bottom') {
+              articleStyle += 'grid-template-rows:auto auto;';
+              mediaStyle += 'aspect-ratio:16 / 9;';
+              mediaOrder = 'order:2;';
+              bodyOrder = 'order:1;';
+            } else {
+              articleStyle += 'grid-template-rows:auto 1fr;';
+              mediaStyle += 'aspect-ratio:16 / 9;';
+            }
+          } else {
+            if (mediaPosition === 'bottom') {
+              articleStyle += 'grid-template-rows:auto ' + mediaHeight + ';';
+              mediaOrder = 'order:2;';
+              bodyOrder = 'order:1;';
+            } else {
+              articleStyle += 'grid-template-rows:' + mediaHeight + ' 1fr;';
+            }
+          }
+        }
+        if (cellFit !== 'content' && !isOverlay) {
+          articleStyle = articleStyle.replace('min-height:220px; height:auto;', 'min-height:0; height:100%;');
+          if (!/height:100%/.test(articleStyle)) articleStyle += ' height:100%; min-height:0;';
+          bodyStyle += ' min-height:0; overflow:hidden;';
+        }
+
+
+        this.shadowRoot.innerHTML =
+          '<style>:host{display:block;width:100%;height:' + (cellFit === 'content' ? 'auto' : '100%') + ';min-width:0;min-height:0;overflow:' + (cellFit === 'scroll' ? 'auto' : cellFit === 'clip' ? 'hidden' : 'visible') + '}.media img{display:block;width:100%;height:100%;object-fit:' + escapeHTML(imageFit) + '}h4{margin:0;font-family:' + escapeHTML(fontFamily) + ';font-size:' + escapeHTML(headingSize) + ';font-weight:' + escapeHTML(headingWeight) + ';line-height:' + escapeHTML(headingLineHeight) + ';color:' + escapeHTML(headingColor) + ';white-space:' + (headingNoWrap ? 'nowrap' : 'normal') + '}p{margin:0;font-family:' + escapeHTML(fontFamily) + ';font-size:' + escapeHTML(bodySize) + ';font-weight:' + escapeHTML(bodyWeight) + ';color:' + escapeHTML(bodyColor) + ';line-height:' + escapeHTML(lineHeight) + ';white-space:pre-wrap}.cta{display:' + (cta && ctaVisible !== 'off' && !hasComposedButton ? 'inline-flex' : 'none') + ';margin-top:6px;align-items:center;justify-content:center;align-self:flex-start;border:0;border-radius:12px;padding:10px 14px;background:' + escapeHTML(buttonBg) + ';color:' + escapeHTML(buttonText) + ';font-family:' + escapeHTML(fontFamily) + ';font-size:' + escapeHTML(buttonSize) + ';font-weight:' + escapeHTML(buttonWeight) + ';font-style:' + escapeHTML(buttonStyle) + ';letter-spacing:' + escapeHTML(buttonLetterSpacing) + ';text-decoration:' + escapeHTML(buttonDecoration) + ';}.composition-slot{display:flex;flex-direction:column;gap:10px;width:100%;margin-top:6px;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;min-height:0;}::slotted(.nested-item-shell),::slotted(ui-slot-item){display:block;min-width:0;max-width:100%;width:100%;background:transparent!important;}</style>' +
+          '<article style="' + articleStyle + '">' +
+          (!isTextOnly ? '<div class="media" style="' + mediaStyle + mediaOrder + '">' + (imageSrc ? '<img src="' + escapeHTML(imageSrc) + '" alt="' + escapeHTML(imageAlt) + '">' : '') + '</div>' : '') +
+          '<div class="body" style="' + bodyStyle + bodyOrder + '"><h4>' + escapeHTML(heading) + '</h4><p>' + escapeHTML(body) + '</p><a class="cta" href="#">' + escapeHTML(cta) + '</a><div class="composition-slot"><slot></slot></div></div></article>';
+      }
+    }
+    customElements.define('editor-info-card', EditorInfoCard);
+
+    class EditorHero extends HTMLElement {
+      static get observedAttributes() { return ['heading','body','cta','cta-visible','image-src','image-alt','mode','media-position','image-fit','media-height','media-behavior','overlay-mode','overlay-position','heading-nowrap','cell-fit','surface','border-color','heading-color','body-color','button-bg','button-text','card-radius','card-shadow','hero-radius','hero-shadow','font-family','heading-size','body-size','button-size','heading-weight','heading-line-height','body-weight','button-weight','line-height','heading-letter-spacing','body-letter-spacing','button-letter-spacing','heading-style','body-style','button-style','heading-decoration','body-decoration','button-decoration']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      render() {
+        const heading = this.getAttribute('heading') || 'Hero Heading';
+        const body = this.getAttribute('body') || 'Hero body text goes here.';
+        const cta = this.getAttribute('cta') || 'Explore';
+        const ctaVisible = this.getAttribute('cta-visible') === 'off' ? 'off' : 'on';
+        const imageSrc = this.getAttribute('image-src') || '';
+        const imageAlt = this.getAttribute('image-alt') || heading || 'Hero image';
+        const mediaPosition = this.getAttribute('media-position') || 'top';
+        const imageFit = this.getAttribute('image-fit') || 'cover';
+        const mediaHeight = this.getAttribute('media-height') || '520px';
+        const overlayMode = this.getAttribute('overlay-mode') === 'off' ? 'off' : 'on';
+        const overlayPosition = this.getAttribute('overlay-position') || 'middle-center';
+        const headingNoWrap = this.getAttribute('heading-nowrap') === 'on';
+        const cellFit = ['clip','scroll','scale'].includes(this.getAttribute('cell-fit')) ? this.getAttribute('cell-fit') : 'content';
+        const surface = this.getAttribute('surface') || 'transparent';
+        const border = this.getAttribute('border-color') || 'transparent';
+        const headingColor = this.getAttribute('heading-color') || '#ffffff';
+        const bodyColor = this.getAttribute('body-color') || '#eef2ff';
+        const buttonBg = this.getAttribute('button-bg') || '#ffffff';
+        const buttonText = this.getAttribute('button-text') || '#111827';
+        const radius = this.getAttribute('hero-radius') || this.getAttribute('card-radius') || '22px';
+        const shadow = this.getAttribute('hero-shadow') || this.getAttribute('card-shadow') || '0 14px 38px rgba(15,23,42,.22)';
+        const fontFamily = this.getAttribute('font-family') || 'Inter, system-ui, Arial, sans-serif';
+        const headingSize = this.getAttribute('heading-size') || '46px';
+        const bodySize = this.getAttribute('body-size') || '18px';
+        const buttonSize = this.getAttribute('button-size') || '15px';
+        const headingWeight = this.getAttribute('heading-weight') || '900';
+        const headingLineHeight = this.getAttribute('heading-line-height') || '1.08';
+        const bodyWeight = this.getAttribute('body-weight') || '500';
+        const buttonWeight = this.getAttribute('button-weight') || '800';
+        const lineHeight = this.getAttribute('line-height') || '1.45';
+        const headingLetterSpacing = this.getAttribute('heading-letter-spacing') || '-.035em';
+        const bodyLetterSpacing = this.getAttribute('body-letter-spacing') || 'normal';
+        const buttonLetterSpacing = this.getAttribute('button-letter-spacing') || 'normal';
+        const headingStyle = this.getAttribute('heading-style') || 'normal';
+        const bodyStyleAttr = this.getAttribute('body-style') || 'normal';
+        const buttonStyle = this.getAttribute('button-style') || 'normal';
+        const headingDecoration = this.getAttribute('heading-decoration') || 'none';
+        const bodyDecoration = this.getAttribute('body-decoration') || 'none';
+        const buttonDecoration = this.getAttribute('button-decoration') || 'none';
+        const hasImage = !!imageSrc;
+        const isOverlay = overlayMode === 'on';
+        let heroClass = 'hero';
+        if (!isOverlay && (mediaPosition === 'left' || mediaPosition === 'right')) heroClass += ' split ' + mediaPosition;
+        if (!isOverlay && mediaPosition === 'bottom') heroClass += ' stacked bottom';
+        if (!isOverlay && mediaPosition === 'top') heroClass += ' stacked top';
+        let contentPosition = '';
+        if (isOverlay) {
+          if (overlayPosition === 'top-left') contentPosition = 'align-items:flex-start;justify-content:flex-start;text-align:left;';
+          else if (overlayPosition === 'top-center') contentPosition = 'align-items:center;justify-content:flex-start;text-align:center;';
+          else if (overlayPosition === 'bottom-left') contentPosition = 'align-items:flex-start;justify-content:flex-end;text-align:left;';
+          else if (overlayPosition === 'bottom-center') contentPosition = 'align-items:center;justify-content:flex-end;text-align:center;';
+          else contentPosition = 'align-items:center;justify-content:center;text-align:center;';
+        }
+        const mediaBlock = hasImage ? '<img src="' + escapeAttr(imageSrc) + '" alt="' + escapeAttr(imageAlt) + '">' : '<div class="placeholder" aria-hidden="true"></div>';
+        this.shadowRoot.innerHTML = '<style>' +
+          ':host{display:block;width:100%;height:' + (cellFit === 'content' ? 'auto' : '100%') + ';min-width:0;min-height:0;overflow:' + (cellFit === 'scroll' ? 'auto' : cellFit === 'clip' ? 'hidden' : 'visible') + '}' +
+          '*,*::before,*::after{box-sizing:border-box}' +
+          '.hero{position:relative;width:100%;min-height:' + escapeHTML(mediaHeight) + ';height:' + (cellFit === 'content' ? 'auto' : '100%') + ';overflow:hidden;border:1px solid ' + escapeHTML(border) + ';border-radius:' + escapeHTML(radius) + ';background:' + escapeHTML(surface) + ';box-shadow:' + escapeHTML(shadow) + ';font-family:' + escapeHTML(fontFamily) + '}' +
+          '.media{position:relative;min-width:0;min-height:0;overflow:hidden;background:linear-gradient(135deg,#1e293b,#4f46e5)}.media img{display:block;width:100%;height:100%;object-fit:' + escapeHTML(imageFit) + '}.placeholder{display:block;width:100%;height:100%;min-height:220px;background:linear-gradient(135deg,#1e293b,#4f46e5)}' +
+          '.content{display:flex;flex-direction:column;gap:14px;min-width:0;z-index:2}h1{margin:0;max-width:980px;color:' + escapeHTML(headingColor) + ';font-size:' + escapeHTML(headingSize) + ';font-weight:' + escapeHTML(headingWeight) + ';font-style:' + escapeHTML(headingStyle) + ';text-decoration:' + escapeHTML(headingDecoration) + ';line-height:' + escapeHTML(headingLineHeight) + ';white-space:' + (headingNoWrap ? 'nowrap' : 'normal') + ';letter-spacing:' + escapeHTML(headingLetterSpacing) + '}p{margin:0;max-width:760px;color:' + escapeHTML(bodyColor) + ';font-size:' + escapeHTML(bodySize) + ';font-weight:' + escapeHTML(bodyWeight) + ';font-style:' + escapeHTML(bodyStyleAttr) + ';text-decoration:' + escapeHTML(bodyDecoration) + ';line-height:' + escapeHTML(lineHeight) + ';letter-spacing:' + escapeHTML(bodyLetterSpacing) + ';white-space:pre-wrap}.cta{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;border:0;border-radius:999px;padding:12px 18px;background:' + escapeHTML(buttonBg) + ';color:' + escapeHTML(buttonText) + ';font-size:' + escapeHTML(buttonSize) + ';font-weight:' + escapeHTML(buttonWeight) + ';font-style:' + escapeHTML(buttonStyle) + ';letter-spacing:' + escapeHTML(buttonLetterSpacing) + ';text-decoration:' + escapeHTML(buttonDecoration) + '}' +
+          '.overlay .media{position:absolute;inset:0}.overlay .media::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,23,42,.68),rgba(15,23,42,.24));pointer-events:none}.overlay .content{position:relative;min-height:' + escapeHTML(mediaHeight) + ';height:100%;padding:clamp(28px,6vw,72px);' + contentPosition + '}.overlay .content[style*="text-align:center"] .cta{align-self:center}' +
+          '.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,42%);min-height:0}.split.left{grid-template-columns:minmax(280px,42%) minmax(0,1fr)}.split.left .media{order:1}.split.left .content{order:2}.split.right .content{order:1}.split.right .media{order:2}.split .content{justify-content:center;padding:clamp(28px,5vw,64px);background:' + escapeHTML(surface) + '}.split .media{min-height:' + escapeHTML(mediaHeight) + '}.stacked{display:grid;grid-template-rows:minmax(220px,' + escapeHTML(mediaHeight) + ') auto}.stacked.bottom{grid-template-rows:auto minmax(220px,' + escapeHTML(mediaHeight) + ')}.stacked.bottom .content{order:1}.stacked.bottom .media{order:2}.stacked .content{padding:clamp(24px,4vw,48px);background:' + escapeHTML(surface) + '}' +
+          '@media(max-width:760px){.split{grid-template-columns:1fr}.split .media,.split .content{order:initial}.overlay .content{padding:28px;align-items:flex-start!important;text-align:left!important}.overlay .content .cta{align-self:flex-start!important}h1{font-size:clamp(32px,10vw,' + escapeHTML(headingSize) + ')}}' +
+          '</style><section class="' + heroClass + (isOverlay ? ' overlay' : '') + '"><div class="media">' + mediaBlock + '</div><div class="content"><h1>' + escapeHTML(heading) + '</h1><p>' + escapeHTML(body) + '</p>' + (ctaVisible === 'off' ? '' : '<a class="cta" href="#">' + escapeHTML(cta) + '</a>') + '</div></section>';
+      }
+    }
+    customElements.define('editor-hero', EditorHero);
+
+    class EditorMenu extends HTMLElement {
+      static get observedAttributes() { return ['brand','items','cta','mode','surface','border-color','brand-color','items-color','button-bg','button-text','menu-radius','menu-shadow','font-family','brand-size','item-size','button-size','brand-weight','item-weight','button-weight','line-height']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      render() {
+        const brand = this.getAttribute('brand') || 'Brand';
+        const items = (this.getAttribute('items') || 'Home|About|Services|Contact').split('|').map(s => s.trim()).filter(Boolean);
+        const cta = this.getAttribute('cta') || 'Get Started';
+        const surface = this.getAttribute('surface') || '#ffffff';
+        const border = this.getAttribute('border-color') || '#dbe4ee';
+        const brandColor = this.getAttribute('brand-color') || '#0f172a';
+        const itemsColor = this.getAttribute('items-color') || '#64748b';
+        const buttonBg = this.getAttribute('button-bg') || '#4f46e5';
+        const buttonText = this.getAttribute('button-text') || '#ffffff';
+        const radius = this.getAttribute('menu-radius') || '16px';
+        const shadow = this.getAttribute('menu-shadow') || '0 1px 2px rgba(15,23,42,.04)';
+        const fontFamily = this.getAttribute('font-family') || 'Inter, system-ui, Arial, sans-serif';
+        const brandSize = this.getAttribute('brand-size') || '20px';
+        const itemSize = this.getAttribute('item-size') || '16px';
+        const buttonSize = this.getAttribute('button-size') || '14px';
+        const brandWeight = this.getAttribute('brand-weight') || '800';
+        const itemWeight = this.getAttribute('item-weight') || '600';
+        const buttonWeight = this.getAttribute('button-weight') || '700';
+        const lineHeight = this.getAttribute('line-height') || '1.4';
+        this.shadowRoot.innerHTML =           '<style>:host{display:block;width:100%;min-width:0;min-height:0;height:auto}nav{border:1px solid ' + escapeHTML(border) + ';border-radius:' + escapeHTML(radius) + ';background:' + escapeHTML(surface) + ';box-shadow:' + escapeHTML(shadow) + ';padding:16px 18px;min-height:72px;height:auto;display:flex;align-items:center}.bar{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;width:100%}.brand{font-family:' + escapeHTML(fontFamily) + ';font-size:' + escapeHTML(brandSize) + ';font-weight:' + escapeHTML(brandWeight) + ';line-height:' + escapeHTML(lineHeight) + ';color:' + escapeHTML(brandColor) + '}.items{display:flex;gap:18px;flex-wrap:wrap;color:' + escapeHTML(itemsColor) + ';font-family:' + escapeHTML(fontFamily) + ';font-size:' + escapeHTML(itemSize) + ';font-weight:' + escapeHTML(itemWeight) + ';line-height:' + escapeHTML(lineHeight) + ';min-width:0}.cta{border-radius:12px;padding:10px 14px;background:' + escapeHTML(buttonBg) + ';color:' + escapeHTML(buttonText) + ';font-family:' + escapeHTML(fontFamily) + ';font-size:' + escapeHTML(buttonSize) + ';font-weight:' + escapeHTML(buttonWeight) + ';white-space:nowrap}@media (max-width:760px){.bar{grid-template-columns:1fr}}</style><nav><div class="bar"><div class="brand">' + escapeHTML(brand) + '</div><div class="items">' + items.map(label => '<span>' + escapeHTML(label) + '</span>').join('') + '</div><div class="cta">' + escapeHTML(cta) + '</div></div></nav>';
+      }
+    }
+    customElements.define('editor-menu', EditorMenu);
+
+    class EditorForm extends HTMLElement {
+      static get observedAttributes() { return ['title','intro','fields','button-label','mode','cell-fit','surface','border-color','heading-color','body-color','button-bg','button-text','form-radius','form-shadow','font-family','heading-size','body-size','field-size','button-size','heading-weight','body-weight','button-weight','line-height']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      render() {
+        const title = this.getAttribute('title') || 'Contact Form';
+        const intro = this.getAttribute('intro') || 'Use this form to capture leads or feedback.';
+        const fields = (this.getAttribute('fields') || 'Name|Email|Message').split('|').map(s => s.trim()).filter(Boolean);
+        const buttonLabel = this.getAttribute('button-label') || 'Submit';
+        const cellFit = ['clip','scroll','scale'].includes(this.getAttribute('cell-fit')) ? this.getAttribute('cell-fit') : 'content';
+        const surface = this.getAttribute('surface') || '#ffffff';
+        const border = this.getAttribute('border-color') || '#dbe4ee';
+        const headingColor = this.getAttribute('heading-color') || '#0f172a';
+        const bodyColor = this.getAttribute('body-color') || '#64748b';
+        const buttonBg = this.getAttribute('button-bg') || '#4f46e5';
+        const buttonText = this.getAttribute('button-text') || '#ffffff';
+        const radius = this.getAttribute('form-radius') || '16px';
+        const shadow = this.getAttribute('form-shadow') || '0 1px 2px rgba(15,23,42,.04)';
+        const fontFamily = this.getAttribute('font-family') || 'Inter, system-ui, Arial, sans-serif';
+        const headingSize = this.getAttribute('heading-size') || '20px';
+        const bodySize = this.getAttribute('body-size') || '16px';
+        const fieldSize = this.getAttribute('field-size') || '14px';
+        const buttonSize = this.getAttribute('button-size') || '14px';
+        const headingWeight = this.getAttribute('heading-weight') || '700';
+        const headingLineHeight = this.getAttribute('heading-line-height') || '1.2';
+        const bodyWeight = this.getAttribute('body-weight') || '400';
+        const buttonWeight = this.getAttribute('button-weight') || '700';
+        const lineHeight = this.getAttribute('line-height') || '1.5';
+        const headingLetterSpacing = this.getAttribute('heading-letter-spacing') || 'normal';
+        const bodyLetterSpacing = this.getAttribute('body-letter-spacing') || 'normal';
+        const buttonLetterSpacing = this.getAttribute('button-letter-spacing') || 'normal';
+        const headingStyle = this.getAttribute('heading-style') || 'normal';
+        const bodyStyleAttr = this.getAttribute('body-style') || 'normal';
+        const buttonStyle = this.getAttribute('button-style') || 'normal';
+        const headingDecoration = this.getAttribute('heading-decoration') || 'none';
+        const bodyDecoration = this.getAttribute('body-decoration') || 'none';
+        const buttonDecoration = this.getAttribute('button-decoration') || 'none';
+        const fieldMarkup = fields.map((field, index) => {
+          const isMessage = /message|comments|details|notes/i.test(field) || index === fields.length - 1;
+          return '<label><span>' + escapeHTML(field) + '</span>' + (isMessage ? '<textarea placeholder="' + escapeHTML(field) + '"></textarea>' : '<input type="text" placeholder="' + escapeHTML(field) + '">') + '</label>';
+        }).join('');
+        this.shadowRoot.innerHTML =
+          '<style>:host{display:block;width:100%;height:' + (cellFit === 'content' ? 'auto' : '100%') + ';min-width:0;min-height:0;overflow:' + (cellFit === 'scroll' ? 'auto' : cellFit === 'clip' ? 'hidden' : 'visible') + '}*,*::before,*::after{box-sizing:border-box}.wrap{height:' + (cellFit === 'content' ? 'auto' : '100%') + ';min-height:0;max-height:' + (cellFit === 'content' ? 'none' : '100%') + ';overflow:' + (cellFit === 'scroll' ? 'auto' : cellFit === 'clip' ? 'hidden' : 'visible') + ';border:1px solid ' + escapeHTML(border) + ';border-radius:' + escapeHTML(radius) + ';background:' + escapeHTML(surface) + ';box-shadow:' + escapeHTML(shadow) + ';padding:20px;display:flex;flex-direction:column;gap:14px}h4{margin:0;font-family:' + escapeHTML(fontFamily) + ';font-size:' + escapeHTML(headingSize) + ';font-weight:' + escapeHTML(headingWeight) + ';line-height:1.2;color:' + escapeHTML(headingColor) + '}p{margin:0;font-family:' + escapeHTML(fontFamily) + ';font-size:' + escapeHTML(bodySize) + ';font-weight:' + escapeHTML(bodyWeight) + ';color:' + escapeHTML(bodyColor) + ';line-height:' + escapeHTML(lineHeight) + '}form{display:grid;gap:12px;margin-top:4px}label{display:grid;gap:6px;font-size:12px;font-weight:700;color:' + escapeHTML(headingColor) + ';font-family:' + escapeHTML(fontFamily) + '}input,textarea{width:100%;font-family:' + escapeHTML(fontFamily) + ';font-size:' + escapeHTML(fieldSize) + ';padding:10px 12px;border:1px solid ' + escapeHTML(border) + ';border-radius:10px;background:#fff;color:#111827}textarea{min-height:110px;resize:vertical}button{align-self:flex-start;border:none;border-radius:12px;padding:10px 14px;background:' + escapeHTML(buttonBg) + ';color:' + escapeHTML(buttonText) + ';font-family:' + escapeHTML(fontFamily) + ';font-size:' + escapeHTML(buttonSize) + ';font-weight:' + escapeHTML(buttonWeight) + ';cursor:pointer}</style>' +
+          '<div class="wrap"><h4>' + escapeHTML(title) + '</h4><p>' + escapeHTML(intro) + '</p><form onsubmit="event.preventDefault()">' + fieldMarkup + '<button type="submit">' + escapeHTML(buttonLabel) + '</button></form></div>';
+      }
+    }
+    customElements.define('editor-form', EditorForm);
+
+    class EditorImage extends HTMLElement {
+      static get observedAttributes() { return ['src','alt','image-fit','media-height','media-behavior','radius','shadow']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      render() {
+        const src = this.getAttribute('src') || '';
+        const alt = this.getAttribute('alt') || 'Image';
+        const imageFit = this.getAttribute('image-fit') || 'cover';
+        const mediaHeight = this.getAttribute('media-height') || '220px';
+        const mediaBehavior = this.getAttribute('media-behavior') || 'fixed-height';
+        const radius = normalizeRadiusValue(this.getAttribute('radius'), '16px');
+        const shadow = this.getAttribute('shadow') || '0 1px 2px rgba(15,23,42,.04)';
+        const frameStyle = mediaBehavior === 'aspect-ratio'
+          ? 'aspect-ratio:16 / 9; height:auto; min-height:0;'
+          : 'height:' + mediaHeight + '; min-height:0;';
+        this.shadowRoot.innerHTML =
+          '<style>:host{display:block;width:100%;height:100%;min-width:0;min-height:0}.frame{width:100%;overflow:hidden;border-radius:' + escapeHTML(radius) + ';box-shadow:' + escapeHTML(shadow) + ';background:linear-gradient(135deg, #dbeafe, #ede9fe);' + frameStyle + '}img{display:block;width:100%;height:100%;object-fit:' + escapeHTML(imageFit) + '}.empty{display:flex;align-items:center;justify-content:center;width:100%;height:100%;min-height:120px;color:#64748b;font:600 14px Inter, system-ui, Arial, sans-serif}</style>' +
+          '<div class="frame">' + (src ? '<img src="' + escapeAttr(src) + '" alt="' + escapeAttr(alt) + '">' : '<div class="empty">Image</div>') + '</div>';
+      }
+    }
+    customElements.define('editor-image', EditorImage);
+
+
+    class EditorText extends HTMLElement {
+      static get observedAttributes() { return ['eyebrow','heading','body','cta','href','align','justify','max-width','cell-fit','surface','border-color','heading-color','body-color','eyebrow-color','button-bg','button-text','radius','shadow','padding','font-family','eyebrow-size','heading-size','body-size','button-size','eyebrow-weight','heading-weight','body-weight','button-weight','line-height','eyebrow-style','heading-style','body-style','button-style','eyebrow-decoration','heading-decoration','body-decoration','button-decoration','eyebrow-letter-spacing','heading-letter-spacing','body-letter-spacing','button-letter-spacing','heading-line-height']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      render() {
+        const eyebrow = (this.hasAttribute('eyebrow') ? this.getAttribute('eyebrow') : '').trim();
+        const heading = this.hasAttribute('heading') ? this.getAttribute('heading') : 'Text Box Heading';
+        const body = (this.hasAttribute('body') ? this.getAttribute('body') : 'Use this text block for section introductions, feature copy, CTA copy, and future hero layouts.').trim();
+        const cta = (this.hasAttribute('cta') ? this.getAttribute('cta') : '').trim();
+        const hasComposedButton = !!this.querySelector('editor-button, ui-slot-item editor-button, .nested-item-shell editor-button');
+        const href = this.getAttribute('href') || '#';
+        const align = this.getAttribute('align') || 'left';
+        const justify = this.getAttribute('justify') || 'flex-start';
+        const maxWidth = this.getAttribute('max-width') || '720px';
+        const cellFit = ['clip','scroll','scale'].includes(this.getAttribute('cell-fit')) ? this.getAttribute('cell-fit') : 'content';
+        const surface = this.getAttribute('surface') || 'transparent';
+        const border = this.getAttribute('border-color') || 'transparent';
+        const headingColor = this.getAttribute('heading-color') || '#0f172a';
+        const bodyColor = this.getAttribute('body-color') || '#475569';
+        const eyebrowColor = this.getAttribute('eyebrow-color') || '#4f46e5';
+        const buttonBg = this.getAttribute('button-bg') || '#4f46e5';
+        const buttonText = this.getAttribute('button-text') || '#ffffff';
+        const radius = normalizeRadiusValue(this.getAttribute('radius'), '16px');
+        const shadow = this.getAttribute('shadow') || 'none';
+        const padding = this.getAttribute('padding') || '24px';
+        const fontFamily = this.getAttribute('font-family') || 'Inter, system-ui, Arial, sans-serif';
+        const eyebrowSize = this.getAttribute('eyebrow-size') || '13px';
+        const headingSize = this.getAttribute('heading-size') || '36px';
+        const bodySize = this.getAttribute('body-size') || '17px';
+        const buttonSize = this.getAttribute('button-size') || '14px';
+        const eyebrowWeight = this.getAttribute('eyebrow-weight') || '800';
+        const headingWeight = this.getAttribute('heading-weight') || '850';
+        const bodyWeight = this.getAttribute('body-weight') || '400';
+        const buttonWeight = this.getAttribute('button-weight') || '800';
+        const lineHeight = this.getAttribute('line-height') || '1.55';
+        const headingLineHeight = this.getAttribute('heading-line-height') || '1.08';
+        const eyebrowStyle = this.getAttribute('eyebrow-style') || 'normal';
+        const headingStyle = this.getAttribute('heading-style') || 'normal';
+        const bodyStyle = this.getAttribute('body-style') || 'normal';
+        const buttonStyle = this.getAttribute('button-style') || 'normal';
+        const eyebrowDecoration = this.getAttribute('eyebrow-decoration') || 'none';
+        const headingDecoration = this.getAttribute('heading-decoration') || 'none';
+        const bodyDecoration = this.getAttribute('body-decoration') || 'none';
+        const buttonDecoration = this.getAttribute('button-decoration') || 'none';
+        const eyebrowLetterSpacing = this.getAttribute('eyebrow-letter-spacing') || '.08em';
+        const headingLetterSpacing = this.getAttribute('heading-letter-spacing') || '-.03em';
+        const bodyLetterSpacing = this.getAttribute('body-letter-spacing') || 'normal';
+        const buttonLetterSpacing = this.getAttribute('button-letter-spacing') || 'normal';
+        const alignItems = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+        const justifyContent = ['flex-start','center','flex-end','space-between'].includes(justify) ? justify : 'flex-start';
+        this.shadowRoot.innerHTML = `
+          <style>
+            :host{display:block;width:100%;height:auto;min-width:0;min-height:0;}
+            .wrap{box-sizing:border-box;width:100%;max-width:${escapeHTML(maxWidth)};padding:${escapeHTML(padding)};border:1px solid ${escapeHTML(border)};border-radius:${escapeHTML(radius)};background:${escapeHTML(surface)};box-shadow:${escapeHTML(shadow)};font-family:${escapeHTML(fontFamily)};display:flex;flex-direction:column;gap:12px;text-align:${escapeHTML(align)};align-items:${escapeHTML(alignItems)};justify-content:${escapeHTML(justifyContent)};min-height:100%;}
+            .eyebrow{margin:0;color:${escapeHTML(eyebrowColor)};font-size:${escapeHTML(eyebrowSize)};font-weight:${escapeHTML(eyebrowWeight)};font-style:${escapeHTML(eyebrowStyle)};text-decoration:${escapeHTML(eyebrowDecoration)};letter-spacing:${escapeHTML(eyebrowLetterSpacing)};text-transform:uppercase;}
+            h2{margin:0;color:${escapeHTML(headingColor)};font-size:${escapeHTML(headingSize)};font-weight:${escapeHTML(headingWeight)};font-style:${escapeHTML(headingStyle)};text-decoration:${escapeHTML(headingDecoration)};line-height:${escapeHTML(headingLineHeight)};letter-spacing:${escapeHTML(headingLetterSpacing)};}
+            p{margin:0;color:${escapeHTML(bodyColor)};font-size:${escapeHTML(bodySize)};font-weight:${escapeHTML(bodyWeight)};font-style:${escapeHTML(bodyStyle)};text-decoration:${escapeHTML(bodyDecoration)};line-height:${escapeHTML(lineHeight)};letter-spacing:${escapeHTML(bodyLetterSpacing)};white-space:pre-wrap;}
+            a{display:${cta && !hasComposedButton ? 'inline-flex' : 'none'};margin-top:6px;align-items:center;justify-content:center;border-radius:12px;padding:10px 14px;background:${escapeHTML(buttonBg)};color:${escapeHTML(buttonText)};font-size:${escapeHTML(buttonSize)};font-weight:${escapeHTML(buttonWeight)};font-style:${escapeHTML(buttonStyle)};letter-spacing:${escapeHTML(buttonLetterSpacing)};text-decoration:${escapeHTML(buttonDecoration)};}
+            .composition-slot{display:flex;flex-direction:column;gap:10px;width:100%;margin-top:8px;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important;min-height:0;}
+            ::slotted(.nested-item-shell),::slotted(ui-slot-item){display:block;min-width:0;max-width:100%;width:100%;background:transparent!important;}
+          </style>
+          <div class="wrap">
+            ${eyebrow ? `<div class="eyebrow">${escapeHTML(eyebrow)}</div>` : ''}
+            <h2>${escapeHTML(heading)}</h2>
+            <p>${escapeHTML(body)}</p>
+            <a href="${escapeAttr(href)}">${escapeHTML(cta)}</a>
+            <div class="composition-slot"><slot></slot></div>
+          </div>`;
+      }
+    }
+    customElements.define('editor-text', EditorText);
+
+
+    class EditorContainer extends HTMLElement {
+      static get observedAttributes() { return ['title','direction','gap','align','justify','padding','surface','border-color','radius','shadow','min-height','wrap','child-fit','child-width','child-min-width','responsive-mode','overflow-mode','nested']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      applySlotSpacing() {
+        const slot = this.shadowRoot && this.shadowRoot.querySelector('slot');
+        if (!slot) return;
+        const assigned = slot.assignedElements({ flatten: true }).filter(el => el && el.tagName && el.tagName.toLowerCase() === 'ui-slot-item');
+        const direction = this.getAttribute('direction') === 'row' ? 'row' : 'column';
+        const gap = this.getAttribute('gap') || '16px';
+        assigned.forEach((el) => {
+          el.style.margin = '0';
+          el.style.marginRight = '';
+          el.style.marginBottom = '';
+        });
+      }
+      render() {
+        const title = this.getAttribute('title') || 'Container';
+        const direction = this.getAttribute('direction') === 'row' ? 'row' : 'column';
+        const gap = this.getAttribute('gap') || '16px';
+        const align = this.getAttribute('align') || 'stretch';
+        const justify = this.getAttribute('justify') || 'flex-start';
+        const padding = this.getAttribute('padding') || '20px';
+        const surface = this.getAttribute('surface') || '#ffffff';
+        const border = this.getAttribute('border-color') || '#dbe4ee';
+        const radius = normalizeRadiusValue(this.getAttribute('radius'), '16px');
+        const shadow = this.getAttribute('shadow') || '0 1px 2px rgba(15,23,42,.04)';
+        const minHeight = this.getAttribute('min-height') || '160px';
+        const isNested = this.getAttribute('nested') === 'true';
+        const hostHeight = isNested ? 'auto' : '100%';
+        const wrapHeight = isNested ? 'auto' : '100%';
+        const nestedMinHeight = isNested ? '0' : minHeight;
+        const wrap = this.getAttribute('wrap') === 'wrap' ? 'wrap' : 'nowrap';
+        const childFit = ['equal','fill','auto','hug','fixed','flexible','no-shrink'].includes(this.getAttribute('child-fit')) ? this.getAttribute('child-fit') : 'auto';
+        const childWidth = this.getAttribute('child-width') || '180px';
+        const childMinWidth = this.getAttribute('child-min-width') || '220px';
+        const responsiveMode = ['none','stack-mobile','stack-tablet'].includes(this.getAttribute('responsive-mode')) ? this.getAttribute('responsive-mode') : 'none';
+        const responsiveMax = responsiveMode === 'stack-tablet' ? '900px' : responsiveMode === 'stack-mobile' ? '640px' : '';
+        const responsiveCSS = responsiveMode === 'none' ? '' : '@media (max-width:' + escapeHTML(responsiveMax) + '){:host([direction="row"]) .wrap{flex-direction:column!important;flex-wrap:nowrap!important;align-items:stretch!important}:host([direction="row"]) ::slotted(ui-slot-item){width:100%!important;max-width:100%!important;flex:0 1 auto!important;min-width:0!important}}';
+        const overflowMode = ['clip','scroll','expand'].includes(this.getAttribute('overflow-mode')) ? this.getAttribute('overflow-mode') : 'clip';
+        const effectiveHostHeight = overflowMode === 'expand' ? 'auto' : hostHeight;
+        const effectiveWrapHeight = overflowMode === 'expand' ? 'auto' : wrapHeight;
+        const hostOverflow = overflowMode === 'expand' ? 'visible' : 'hidden';
+        const wrapOverflow = overflowMode === 'scroll' ? 'auto' : overflowMode === 'expand' ? 'visible' : 'hidden';
+        const normalizedChildFit = childFit === 'fill' ? 'equal' : childFit === 'hug' ? 'auto' : childFit;
+        const flexMap = {
+          equal: '1 1 0',
+          auto: '0 1 auto',
+          fixed: '0 0 ' + childWidth,
+          flexible: '1 1 ' + childWidth,
+          'no-shrink': '0 0 auto'
+        };
+        const rowFlex = flexMap[normalizedChildFit] || flexMap.equal;
+        const columnFlex = normalizedChildFit === 'equal' || normalizedChildFit === 'flexible' ? '1 1 0' : normalizedChildFit === 'fixed' ? '0 0 ' + childWidth : '0 0 auto';
+        const rowWidth = normalizedChildFit === 'fixed' ? childWidth : 'auto';
+        this.shadowRoot.innerHTML =
+          '<style>:host{display:block;width:100%;height:' + escapeHTML(effectiveHostHeight) + ';min-width:0;min-height:0;max-width:100%;box-sizing:border-box;overflow:' + escapeHTML(hostOverflow) + '}.wrap{box-sizing:border-box;width:100%;height:' + escapeHTML(effectiveWrapHeight) + ';min-height:' + escapeHTML(nestedMinHeight) + ';display:flex;flex-direction:' + escapeHTML(direction) + ';flex-wrap:' + escapeHTML(wrap) + ';gap:' + escapeHTML(gap) + ';align-items:' + escapeHTML(align) + ';justify-content:' + escapeHTML(justify) + ';padding:' + escapeHTML(padding) + ';background:' + escapeHTML(surface) + ';border:1px dashed ' + escapeHTML(border) + ';border-radius:' + escapeHTML(radius) + ';box-shadow:' + escapeHTML(shadow) + ';color:#64748b;font:700 14px Inter, system-ui, Arial, sans-serif;overflow:' + escapeHTML(wrapOverflow) + ';max-width:100%;min-width:0}.placeholder{min-height:64px;border:1px dashed rgba(79,70,229,.32);border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(79,70,229,.04);text-align:center;padding:12px}slot{display:contents}::slotted(ui-slot-item){display:block;min-width:0;max-width:100%;box-sizing:border-box;background:transparent!important;overflow-wrap:anywhere;align-self:auto!important;}:host([direction="column"]) ::slotted(ui-slot-item){flex:' + escapeHTML(columnFlex) + ' !important;max-width:100%;}:host([direction="column"][align="stretch"]) ::slotted(ui-slot-item){width:100% !important;}:host([direction="column"]:not([align="stretch"])) ::slotted(ui-slot-item){width:fit-content !important;max-width:100%;}:host([direction="column"][child-fit="fixed"]:not([align="stretch"])) ::slotted(ui-slot-item){width:' + escapeHTML(childWidth) + ' !important;max-width:min(100%,' + escapeHTML(childWidth) + ');}:host([direction="row"]) ::slotted(ui-slot-item){width:' + escapeHTML(rowWidth) + ' !important;flex:' + escapeHTML(rowFlex) + ' !important;}:host([direction="row"][child-fit="auto"]) ::slotted(ui-slot-item){width:auto!important;max-width:100%;flex:0 0 auto!important;}:host([direction="row"][child-fit="fixed"]) ::slotted(ui-slot-item){width:' + escapeHTML(childWidth) + '!important;max-width:min(100%,' + escapeHTML(childWidth) + ');}:host([direction="row"][child-fit="flexible"]) ::slotted(ui-slot-item){min-width:min(100%,' + escapeHTML(childWidth) + ');}:host([direction="row"][child-fit="no-shrink"]) ::slotted(ui-slot-item){width:auto!important;max-width:100%;flex:0 0 auto!important;}:host([direction="column"][child-fit="fixed"]) ::slotted(ui-slot-item){min-height:' + escapeHTML(childWidth) + ';}:host([direction="row"][wrap="wrap"]) ::slotted(ui-slot-item){min-width:min(' + escapeHTML(childMinWidth) + ',100%);}'+responsiveCSS+'.label{font-weight:900;color:#4f46e5;margin-bottom:4px}.stack{display:grid;gap:4px}</style>' +
+          '<div class="wrap"><slot><div class="placeholder"><div class="stack"><div class="label">' + escapeHTML(title) + '</div><div>Flex ' + escapeHTML(direction) + ' · Drop components here</div></div></div></slot></div>';
+        const slot = this.shadowRoot.querySelector('slot');
+        if (slot) slot.addEventListener('slotchange', () => this.applySlotSpacing(), { once: true });
+        requestAnimationFrame(() => this.applySlotSpacing());
+      }
+    }
+    customElements.define('editor-container', EditorContainer);
+
+
+
+
+    class EditorButton extends HTMLElement {
+      static get observedAttributes() { return ['label','href','align','mode','button-bg','button-text','button-border','button-radius','button-shadow','font-family','button-size','button-weight','button-letter-spacing','button-style','button-decoration','padding-x','padding-y','nested']; }
+      constructor() { super(); this.attachShadow({ mode: 'open' }); }
+      connectedCallback() { this.render(); }
+      attributeChangedCallback() { this.render(); }
+      render() {
+        const label = this.getAttribute('label') || 'Button';
+        const href = this.getAttribute('href') || '#';
+        const align = this.getAttribute('align') || 'left';
+        const bg = this.getAttribute('button-bg') || '#4f46e5';
+        const text = this.getAttribute('button-text') || '#ffffff';
+        const border = this.getAttribute('button-border') || 'transparent';
+        const radius = this.getAttribute('button-radius') || '999px';
+        const shadow = this.getAttribute('button-shadow') || 'none';
+        const fontFamily = this.getAttribute('font-family') || 'Inter, system-ui, Arial, sans-serif';
+        const size = this.getAttribute('button-size') || '14px';
+        const weight = this.getAttribute('button-weight') || '800';
+        const letterSpacing = this.getAttribute('button-letter-spacing') || 'normal';
+        const style = this.getAttribute('button-style') || 'normal';
+        const decoration = this.getAttribute('button-decoration') || 'none';
+        const paddingX = this.getAttribute('padding-x') || '18px';
+        const paddingY = this.getAttribute('padding-y') || '12px';
+        const justify = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+        this.shadowRoot.innerHTML = '<style>' +
+          ':host{display:block;width:100%;min-width:0;min-height:0;box-sizing:border-box;overflow:visible}' +
+          ':host([nested="true"]){width:max-content;max-width:100%;flex:0 0 auto;overflow:visible}' +
+          '.wrap{display:flex;width:100%;justify-content:' + escapeHTML(justify) + ';align-items:center;min-width:0;box-sizing:border-box;overflow:visible}' +
+          ':host([nested="true"]) .wrap{width:max-content;max-width:100%}' +
+          'a{display:inline-flex;align-items:center;justify-content:center;max-width:100%;box-sizing:border-box;text-decoration:' + escapeHTML(decoration) + ';border-radius:' + escapeHTML(radius) + ';padding:' + escapeHTML(paddingY) + ' ' + escapeHTML(paddingX) + ';font-family:' + escapeHTML(fontFamily) + ';font-size:' + escapeHTML(size) + ';font-weight:' + escapeHTML(weight) + ';font-style:' + escapeHTML(style) + ';letter-spacing:' + escapeHTML(letterSpacing) + ';background:' + escapeHTML(bg) + ';color:' + escapeHTML(text) + ';border:1px solid ' + escapeHTML(border) + ';box-shadow:' + escapeHTML(shadow) + ';line-height:1.2;white-space:nowrap;overflow:visible}' +
+          '</style><div class="wrap"><a href="' + escapeAttr(href) + '">' + escapeHTML(label) + '</a></div>';
+      }
+    }
+    customElements.define('editor-button', EditorButton);
+
+
+    function getExportScaleTarget(wrap) {
+      return wrap?.querySelector?.('editor-info-card, editor-menu, editor-form, editor-image, editor-text, editor-button') || null;
+    }
+    function updateExportScaleToFit(wrap) {
+      if (!wrap || wrap.getAttribute('fit') !== 'scale') return;
+      const component = getExportScaleTarget(wrap);
+      if (!component) return;
+      component.style.transform = '';
+      component.style.transformOrigin = 'top left';
+      component.style.width = '100%';
+      component.style.height = 'auto';
+      component.style.maxHeight = '';
+      requestAnimationFrame(() => {
+        if (!wrap.isConnected || wrap.getAttribute('fit') !== 'scale') return;
+        const rect = wrap.getBoundingClientRect();
+        const availableH = Math.max(1, wrap.clientHeight || rect.height);
+        const availableW = Math.max(1, wrap.clientWidth || rect.width);
+        const rootChild = component.shadowRoot?.querySelector('article, nav, .wrap, .frame') || component;
+        const naturalH = Math.max(1, rootChild.scrollHeight || component.scrollHeight || component.offsetHeight || 1);
+        const naturalW = Math.max(1, rootChild.scrollWidth || component.scrollWidth || component.offsetWidth || 1);
+        const scale = Math.max(0.1, Math.min(1, availableH / naturalH, availableW / naturalW));
+        component.style.transform = 'scale(' + scale + ')';
+        component.style.transformOrigin = 'top left';
+        component.style.width = (availableW / scale) + 'px';
+        component.style.height = (availableH / scale) + 'px';
+        component.style.maxHeight = (availableH / scale) + 'px';
+      });
+    }
+    function refreshExportScaleToFit() {
+      document.querySelectorAll('ui-cell[fit="scale"]').forEach(updateExportScaleToFit);
+    }
+    window.addEventListener('load', refreshExportScaleToFit);
+    window.addEventListener('resize', refreshExportScaleToFit);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(refreshExportScaleToFit);
+    setTimeout(refreshExportScaleToFit, 100);
+
+
+  </script>
+</body>
+</html>
