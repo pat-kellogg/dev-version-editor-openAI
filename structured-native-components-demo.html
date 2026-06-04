@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Structured Native Components Demo</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-2: #f9fbfe;
+      --text: #162033;
+      --muted: #64748b;
+      --line: #dbe4f0;
+      --brand: #2557d6;
+      --brand-2: #eef3ff;
+      --good: #0f8a5f;
+      --warn: #b66a00;
+      --bad: #b42318;
+      --shadow: 0 18px 45px rgba(18, 35, 70, 0.11);
+      --radius: 18px;
+      --space-1: 6px;
+      --space-2: 10px;
+      --space-3: 16px;
+      --space-4: 24px;
+      --space-5: 34px;
+      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background:
+        radial-gradient(circle at top left, rgba(37, 87, 214, 0.16), transparent 34rem),
+        linear-gradient(180deg, #ffffff 0%, var(--bg) 40%);
+      color: var(--text);
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .demo-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+    }
+
+    .story-panel {
+      padding: 28px;
+      border-right: 1px solid var(--line);
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+
+    .story-panel h1 {
+      margin: 0 0 12px;
+      font-size: 25px;
+      line-height: 1.12;
+      letter-spacing: -0.04em;
+    }
+
+    .story-panel p {
+      color: var(--muted);
+      line-height: 1.55;
+      margin: 0 0 18px;
+      font-size: 14px;
+    }
+
+    .step-list {
+      display: grid;
+      gap: 10px;
+      margin: 22px 0;
+    }
+
+    .step-button {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 14px;
+      padding: 13px 14px;
+      cursor: pointer;
+      display: grid;
+      gap: 4px;
+      transition: 0.18s ease;
+    }
+
+    .step-button strong {
+      font-size: 13px;
+    }
+
+    .step-button span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .step-button[aria-pressed="true"] {
+      border-color: rgba(37,87,214,.42);
+      background: var(--brand-2);
+      box-shadow: 0 8px 24px rgba(37,87,214,.12);
+    }
+
+    .control-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .control {
+      border: 1px solid var(--line);
+      background: white;
+      padding: 9px 11px;
+      border-radius: 999px;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .control.active {
+      background: var(--text);
+      color: white;
+      border-color: var(--text);
+    }
+
+    .workspace {
+      padding: 28px;
+      min-width: 0;
+    }
+
+    .demo-frame {
+      max-width: 1180px;
+      margin: 0 auto;
+      background: #e9eef7;
+      border: 1px solid #d1dbea;
+      border-radius: 28px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      transition: max-width .25s ease;
+    }
+
+    .demo-frame.tablet { max-width: 820px; }
+    .demo-frame.mobile { max-width: 430px; }
+
+    .viewport-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #526179;
+      padding: 4px 8px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+
+    .app-screen {
+      background: var(--panel);
+      border-radius: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(15,23,42,.08);
+    }
+
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff, #fbfdff);
+      position: relative;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--brand), #7aa2ff);
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 900;
+    }
+
+    .brand h2 {
+      margin: 0;
+      font-size: 17px;
+      letter-spacing: -0.03em;
+    }
+
+    .brand small {
+      display: block;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .pill {
+      background: var(--brand-2);
+      color: #1c46b4;
+      border: 1px solid #cddcff;
+      padding: 8px 11px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      min-height: 650px;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: #fbfcff;
+      padding: 20px 16px;
+      position: relative;
+    }
+
+    .nav-title {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      margin: 0 0 10px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav a {
+      text-decoration: none;
+      color: var(--text);
+      padding: 11px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav a.active {
+      background: #eef3ff;
+      color: #214dbb;
+    }
+
+    .nav-badge {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .main {
+      padding: 24px;
+      display: grid;
+      gap: var(--space-4);
+      background: linear-gradient(180deg, #ffffff, #f8fbff);
+      position: relative;
+    }
+
+    .hero-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: var(--space-3);
+      align-items: end;
+    }
+
+    .hero-row h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: -0.05em;
+      line-height: 1.05;
+    }
+
+    .hero-row p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+      max-width: 68ch;
+    }
+
+    .primary-button {
+      border: 0;
+      border-radius: 12px;
+      background: var(--brand);
+      color: white;
+      padding: 11px 14px;
+      font-weight: 800;
+      box-shadow: 0 10px 22px rgba(37, 87, 214, 0.22);
+      white-space: nowrap;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: var(--space-3);
+      position: relative;
+    }
+
+    .metric-card, .panel-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: var(--space-3);
+      box-shadow: 0 8px 24px rgba(16, 31, 60, 0.05);
+      position: relative;
+    }
+
+    .metric-card small {
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .metric-card strong {
+      display: block;
+      font-size: 27px;
+      letter-spacing: -0.05em;
+      margin-top: 8px;
+    }
+
+    .metric-card span {
+      display: inline-block;
+      margin-top: 9px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--good);
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+      gap: var(--space-3);
+      position: relative;
+    }
+
+    .panel-card h3 {
+      margin: 0 0 14px;
+      font-size: 16px;
+      letter-spacing: -0.03em;
+    }
+
+    .workflow-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .workflow-item {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--panel-2);
+      border: 1px solid #edf2f8;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--good);
+    }
+
+    .status-dot.warn { background: var(--warn); }
+    .status-dot.bad { background: var(--bad); }
+
+    .workflow-item strong {
+      display: block;
+      font-size: 13px;
+    }
+
+    .workflow-item span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .status-chip {
+      border-radius: 999px;
+      padding: 6px 9px;
+      background: #edf7f3;
+      color: #0b704c;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .status-chip.warn {
+      background: #fff4df;
+      color: #946000;
+    }
+
+    .activity {
+      display: grid;
+      gap: 12px;
+    }
+
+    .activity-row {
+      display: grid;
+      gap: 3px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #edf2f8;
+    }
+
+    .activity-row:last-child { border-bottom: 0; padding-bottom: 0; }
+
+    .activity-row strong { font-size: 13px; }
+    .activity-row span { color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+    .structure-overlay [data-region],
+    .show-structure [data-region] {
+      outline: 2px dashed rgba(37, 87, 214, .65);
+      outline-offset: -4px;
+    }
+
+    .show-structure [data-region]::before {
+      content: attr(data-region);
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      z-index: 5;
+      padding: 4px 7px;
+      background: var(--brand);
+      color: white;
+      border-radius: 8px;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      box-shadow: 0 4px 12px rgba(0,0,0,.18);
+    }
+
+    .show-structure .metric-card::before,
+    .show-structure .panel-card::before {
+      top: 8px;
+      left: 8px;
+    }
+
+    .structure-map {
+      display: none;
+      margin: 18px auto 0;
+      max-width: 1180px;
+      background: #101827;
+      color: #dbeafe;
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,.1);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.75;
+      white-space: pre-wrap;
+    }
+
+    .structure-map.visible { display: block; }
+
+    .callout {
+      margin: 18px auto 0;
+      max-width: 1180px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+      color: var(--muted);
+      line-height: 1.55;
+      box-shadow: 0 10px 30px rgba(16,31,60,.07);
+    }
+
+    .callout strong { color: var(--text); }
+
+    @media (max-width: 920px) {
+      .demo-shell {
+        grid-template-columns: 1fr;
+      }
+      .story-panel {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .workspace {
+        padding: 18px;
+      }
+    }
+
+    .demo-frame.tablet .layout,
+    .demo-frame.mobile .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .demo-frame.tablet .sidebar,
+    .demo-frame.mobile .sidebar {
+      border-right: 0;
+      border-bottom: 1px solid var(--line);
+      padding: 14px;
+    }
+
+    .demo-frame.tablet .nav,
+    .demo-frame.mobile .nav {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .demo-frame.tablet .nav a,
+    .demo-frame.mobile .nav a {
+      justify-content: center;
+      text-align: center;
+    }
+
+    .demo-frame.tablet .metrics-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .demo-frame.tablet .content-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .demo-frame.mobile .app-header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .demo-frame.mobile .header-actions {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .demo-frame.mobile .main {
+      padding: 16px;
+    }
+
+    .demo-frame.mobile .hero-row {
+      grid-template-columns: 1fr;
+    }
+
+    .demo-frame.mobile .metrics-grid,
+    .demo-frame.mobile .content-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .demo-frame.mobile .workflow-item {
+      grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .demo-frame.mobile .workflow-item .status-chip {
+      grid-column: 2;
+      width: fit-content;
+    }
+
+    .demo-frame.mobile .nav {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .demo-frame.mobile .brand h2 {
+      font-size: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-shell">
+    <aside class="story-panel">
+      <h1>Structured Native Components Demo</h1>
+      <p>
+        This demo shows the project as a bridge between design intent and implementation reality:
+        not a Figma replacement, not a framework replacement, but a structured browser-native composition workflow.
+      </p>
+
+      <div class="step-list">
+        <button class="step-button" data-step="finished" aria-pressed="true">
+          <strong>1. Finished Screen</strong>
+          <span>A polished operational dashboard built from governed UI pieces.</span>
+        </button>
+        <button class="step-button" data-step="structure" aria-pressed="false">
+          <strong>2. Reveal Structure</strong>
+          <span>Show semantic regions, layout containers, and component hierarchy.</span>
+        </button>
+        <button class="step-button" data-step="responsive" aria-pressed="false">
+          <strong>3. Responsive Behavior</strong>
+          <span>Demonstrate that the screen adapts through layout rules, not pixel painting.</span>
+        </button>
+        <button class="step-button" data-step="export" aria-pressed="false">
+          <strong>4. Export / Handoff Meaning</strong>
+          <span>Show the structure a developer can understand and reinterpret.</span>
+        </button>
+      </div>
+
+      <p>
+        The point of the demo is simple: a prototype can carry structural intent,
+        responsive logic, and component meaning before a developer rebuilds it in React, Angular, Vue, or another stack.
+      </p>
+
+      <div class="control-row">
+        <button class="control active" data-size="desktop">Desktop</button>
+        <button class="control" data-size="tablet">Tablet</button>
+        <button class="control" data-size="mobile">Mobile</button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <section class="demo-frame" id="frame">
+        <div class="viewport-label">
+          <span id="viewportName">Desktop composition</span>
+          <span>Browser-native layout</span>
+        </div>
+
+        <div class="app-screen" id="screen">
+          <header class="app-header" data-region="Header / App Shell">
+            <div class="brand">
+              <div class="brand-mark">N</div>
+              <div>
+                <h2>Network Operations Console</h2>
+                <small>Structured dashboard prototype</small>
+              </div>
+            </div>
+            <div class="header-actions">
+              <span class="pill">Live status</span>
+              <button class="primary-button">Create report</button>
+            </div>
+          </header>
+
+          <div class="layout" data-region="Application Layout Grid">
+            <aside class="sidebar" data-region="Navigation Region">
+              <p class="nav-title">Workspace</p>
+              <nav class="nav" aria-label="Workspace navigation">
+                <a class="active" href="#">Overview <span class="nav-badge">12</span></a>
+                <a href="#">Shipments <span class="nav-badge">48</span></a>
+                <a href="#">Exceptions <span class="nav-badge">7</span></a>
+                <a href="#">Reports <span class="nav-badge">4</span></a>
+              </nav>
+            </aside>
+
+            <section class="main" data-region="Main Content Region">
+              <div class="hero-row" data-region="Page Heading Region">
+                <div>
+                  <h1>Operational health across the network</h1>
+                  <p>
+                    A structured prototype composed from semantic regions, reusable components,
+                    governed spacing, and responsive browser layout.
+                  </p>
+                </div>
+                <button class="primary-button">Resolve exceptions</button>
+              </div>
+
+              <section class="metrics-grid" data-region="Metrics Grid">
+                <article class="metric-card" data-region="Metric Component">
+                  <small>On-time flow</small>
+                  <strong>94.8%</strong>
+                  <span>+2.1% today</span>
+                </article>
+                <article class="metric-card" data-region="Metric Component">
+                  <small>Active shipments</small>
+                  <strong>18,420</strong>
+                  <span>stable volume</span>
+                </article>
+                <article class="metric-card" data-region="Metric Component">
+                  <small>Open exceptions</small>
+                  <strong>37</strong>
+                  <span style="color:var(--warn)">needs review</span>
+                </article>
+                <article class="metric-card" data-region="Metric Component">
+                  <small>Critical holds</small>
+                  <strong>6</strong>
+                  <span style="color:var(--bad)">priority queue</span>
+                </article>
+              </section>
+
+              <section class="content-grid" data-region="Content Grid">
+                <article class="panel-card" data-region="Workflow Panel Component">
+                  <h3>Priority workflow</h3>
+                  <div class="workflow-list">
+                    <div class="workflow-item">
+                      <span class="status-dot"></span>
+                      <div><strong>Memphis hub clearance</strong><span>Shipment batch released to outbound lanes.</span></div>
+                      <span class="status-chip">Ready</span>
+                    </div>
+                    <div class="workflow-item">
+                      <span class="status-dot warn"></span>
+                      <div><strong>Weather exception review</strong><span>Midwest route requires dispatcher confirmation.</span></div>
+                      <span class="status-chip warn">Review</span>
+                    </div>
+                    <div class="workflow-item">
+                      <span class="status-dot bad"></span>
+                      <div><strong>Address validation queue</strong><span>Six high-priority shipments need correction.</span></div>
+                      <span class="status-chip warn">Action</span>
+                    </div>
+                  </div>
+                </article>
+
+                <aside class="panel-card" data-region="Activity Feed Component">
+                  <h3>Recent activity</h3>
+                  <div class="activity">
+                    <div class="activity-row">
+                      <strong>Exception closed</strong>
+                      <span>Route MEM-214 returned to normal processing.</span>
+                    </div>
+                    <div class="activity-row">
+                      <strong>Capacity alert</strong>
+                      <span>Additional sort capacity requested for regional lane.</span>
+                    </div>
+                    <div class="activity-row">
+                      <strong>Report generated</strong>
+                      <span>Daily network summary is ready for review.</span>
+                    </div>
+                  </div>
+                </aside>
+              </section>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <pre class="structure-map" id="structureMap">Application Shell
+├── Header / App Shell
+├── Application Layout Grid
+│   ├── Navigation Region
+│   └── Main Content Region
+│       ├── Page Heading Region
+│       ├── Metrics Grid
+│       │   ├── Metric Component
+│       │   ├── Metric Component
+│       │   ├── Metric Component
+│       │   └── Metric Component
+│       └── Content Grid
+│           ├── Workflow Panel Component
+│           └── Activity Feed Component
+
+Handoff meaning:
+- The screen is not just a picture.
+- It carries semantic layout intent.
+- It shows responsive behavior.
+- It exposes reusable component relationships.
+- Developers can rebuild it in React, Angular, Vue, or another stack with less ambiguity.</pre>
+
+      <div class="callout" id="callout">
+        <strong>Demo message:</strong> This is a structured, browser-native composition environment.
+        It helps designers communicate layout intent, component hierarchy, and responsive behavior without claiming to replace developers or frameworks.
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const frame = document.getElementById('frame');
+    const screen = document.getElementById('screen');
+    const structureMap = document.getElementById('structureMap');
+    const viewportName = document.getElementById('viewportName');
+    const callout = document.getElementById('callout');
+    const stepButtons = Array.from(document.querySelectorAll('.step-button'));
+    const sizeButtons = Array.from(document.querySelectorAll('.control[data-size]'));
+
+    const callouts = {
+      finished: '<strong>Finished screen:</strong> Start with one polished operational dashboard. The goal is not to show every editor feature. The goal is to make the concept immediately understandable.',
+      structure: '<strong>Structure revealed:</strong> The prototype exposes semantic regions, governed components, and hierarchy. This is the core difference from a flat visual mockup.',
+      responsive: '<strong>Responsive behavior:</strong> The layout adapts through browser-native rules. Cards, navigation, and content regions reorganize instead of merely shrinking.',
+      export: '<strong>Handoff meaning:</strong> The export is not positioned as a production Angular or React app. It is a structured implementation-aware prototype that reduces ambiguity.'
+    };
+
+    function setStep(step) {
+      stepButtons.forEach(btn => btn.setAttribute('aria-pressed', String(btn.dataset.step === step)));
+      screen.classList.toggle('show-structure', step === 'structure' || step === 'export');
+      structureMap.classList.toggle('visible', step === 'export');
+      callout.innerHTML = callouts[step] || callouts.finished;
+
+      if (step === 'responsive') {
+        setSize('tablet');
+      }
+    }
+
+    function setSize(size) {
+      frame.classList.remove('tablet', 'mobile');
+      if (size !== 'desktop') frame.classList.add(size);
+      sizeButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.size === size));
+
+      const labels = {
+        desktop: 'Desktop composition',
+        tablet: 'Tablet composition',
+        mobile: 'Mobile composition'
+      };
+      viewportName.textContent = labels[size];
+    }
+
+    stepButtons.forEach(btn => btn.addEventListener('click', () => setStep(btn.dataset.step)));
+    sizeButtons.forEach(btn => btn.addEventListener('click', () => setSize(btn.dataset.size)));
+  </script>
+</body>
+</html>
