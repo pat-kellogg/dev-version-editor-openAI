@@ -561,21 +561,6 @@
       border-radius: var(--radius-lg);
     }
 
-    .spotlight-target::after {
-      content: "";
-      position: absolute;
-      inset: -8px;
-      border: 3px solid rgba(255,255,255,.9);
-      border-radius: calc(var(--radius-lg) + 9px);
-      pointer-events: none;
-      animation: pulseRing 1.5s infinite;
-    }
-
-    @keyframes pulseRing {
-      0% { box-shadow: 0 0 0 0 rgba(37,87,214,.65); }
-      80% { box-shadow: 0 0 0 14px rgba(37,87,214,0); }
-      100% { box-shadow: 0 0 0 0 rgba(37,87,214,0); }
-    }
 
     .callout {
       position: fixed;
@@ -677,11 +662,9 @@
     .show-grid .metrics-grid,
     .show-grid .content-grid,
     .show-grid .main-layout {
-      background-image:
-        linear-gradient(rgba(21,163,199,.34) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(21,163,199,.34) 1px, transparent 1px);
-      background-size: 48px 48px;
-      outline: 3px solid rgba(21,163,199,.7);
+      background-image: none;
+      background-color: transparent;
+      outline: 3px solid rgba(21,163,199,.62);
       outline-offset: -4px;
     }
 
@@ -1036,9 +1019,29 @@
 
     .token-tag,
     .schema-tag,
-    .show-tokens .token-tag,
     .show-schema .schema-tag {
       display: none !important;
+    }
+
+    .show-tokens .token-tag {
+      display: inline-flex !important;
+      align-items: center;
+      gap: 6px;
+      background: #12233d;
+      color: #dbeafe;
+      border: 1px solid rgba(255,255,255,.24);
+      box-shadow: 0 10px 24px rgba(0,0,0,.22);
+    }
+
+    .show-tokens .token-tag::before {
+      content: "Token";
+      background: rgba(255,255,255,.16);
+      color: #ffffff;
+      border-radius: 999px;
+      padding: 2px 6px;
+      font-size: 9px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
     }
 
     .app-shell.tablet-preview {
@@ -1141,7 +1144,7 @@
 
     <aside class="tour-panel">
       <h1>Structured Export Inspection</h1>
-      <p>This is not the editor itself. This walkthrough demonstrates the kind of structured, implementation-aware UI composition exported by the system.</p>
+      <p>This is not the editor itself. This walkthrough demonstrates the kind of structured, implementation-aware UI composition exported by the system. It matters because developer handoff often breaks down when layout intent, responsive behavior, component structure, and design-system rules are not clearly communicated.</p>
 
       <div class="intro-actions">
         <button class="btn" id="showUseCases" type="button">How this can be used</button>
@@ -1226,7 +1229,7 @@
             <span class="step-copy"><strong>Schema & variants</strong><span>Show component contracts and allowed states.</span></span>
           </button>
           <div class="tour-step-detail">
-            <p>Components can expose a contract: allowed fields, semantic roles, and approved variants. The point is governed composition, not freeform chaos.</p>
+            <p>Components can expose a contract: allowed fields, semantic roles, and approved variants. Its about governed composition not freeform chaos.</p>
             <div class="inline-detail">MetricCard schema
 {
   title,
@@ -1261,14 +1264,12 @@
             <span class="step-copy"><strong>Export / handoff</strong><span>Show what becomes clearer for developers.</span></span>
           </button>
           <div class="tour-step-detail">
-            <p>The handoff value is not a finished framework app. The value is a structured map of layout, components, tokens, variants, and responsive intent.</p>
-            <div class="inline-detail">Handoff package
-1. Semantic region map
-2. Component hierarchy
-3. Layout rules
-4. Token references
-5. Schema / variant contracts
-6. Responsive behavior notes</div>
+            <p>Its all designed to help developers better understand designer intent and streamline design to code handoff.</p>
+            <div class="inline-detail">1. Component hierarchy
+2. Layout rules
+3. Token references
+4. Schema / variant contracts
+5. Responsive behavior notes</div>
             
           </div>
         </section>
@@ -1364,6 +1365,9 @@
 
             <section class="content-grid" id="contentGrid" data-region="Content Grid">
               <article class="panel-card" id="workflowPanel" data-region="Workflow Panel Component">
+                <span class="token-tag token-1">--radius-lg: 22px</span>
+                <span class="token-tag token-2">--brand / --surface</span>
+                <span class="token-tag token-3">--space-3: 16px</span>
                 <div class="panel-head">
                   <h3>Priority workflow</h3>
                   <a href="#">View all</a>
