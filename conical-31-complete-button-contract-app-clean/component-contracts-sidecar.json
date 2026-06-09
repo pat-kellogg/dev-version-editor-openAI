@@ -1,0 +1,875 @@
+{
+  "schemaVersion": "0.1.0",
+  "purpose": "Sidecar component contract registry. Does not modify the editor HTML.",
+  "sourceFile": "conical 31 rollback contract registry(1).html",
+  "generatedFrom": "uploaded rollback file",
+  "contracts": [
+    {
+      "id": "editor-actions",
+      "tag": "editor-actions",
+      "source": "native-editor",
+      "name": "Actions",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-button",
+      "tag": "editor-button",
+      "source": "native-editor",
+      "name": "Button",
+      "runtime": "native-web-component",
+      "category": "action",
+      "semanticRole": "call-to-action",
+      "props": {
+        "label": {
+          "type": "string"
+        },
+        "variant": {
+          "type": "enum",
+          "values": [
+            "primary",
+            "secondary",
+            "ghost",
+            "danger"
+          ]
+        },
+        "size": {
+          "type": "enum",
+          "values": [
+            "small",
+            "medium",
+            "large"
+          ]
+        },
+        "href": {
+          "type": "string",
+          "optional": true
+        }
+      },
+      "slots": [
+        "default",
+        "icon-left",
+        "icon-right"
+      ],
+      "tokens": [
+        "button.background",
+        "button.text",
+        "button.border",
+        "button.radius",
+        "button.padding"
+      ]
+    },
+    {
+      "id": "editor-button-native",
+      "tag": "editor-button-native",
+      "source": "native-editor",
+      "name": "Button Native",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-canvas-activation",
+      "tag": "editor-canvas-activation",
+      "source": "native-editor",
+      "name": "Canvas Activation",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-chrome",
+      "tag": "editor-chrome",
+      "source": "native-editor",
+      "name": "Chrome",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-close",
+      "tag": "editor-close",
+      "source": "native-editor",
+      "name": "Close",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-component",
+      "tag": "editor-component",
+      "source": "native-editor",
+      "name": "Component",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-container",
+      "tag": "editor-container",
+      "source": "native-editor",
+      "name": "Container / Stack",
+      "runtime": "native-web-component",
+      "category": "layout",
+      "semanticRole": "layout-container",
+      "props": {
+        "direction": {
+          "type": "enum",
+          "values": [
+            "row",
+            "column"
+          ]
+        },
+        "gap": {
+          "type": "string"
+        },
+        "align": {
+          "type": "string"
+        },
+        "justify": {
+          "type": "string"
+        }
+      },
+      "slots": [
+        "default"
+      ],
+      "tokens": [
+        "container.background",
+        "container.gap",
+        "container.padding",
+        "container.radius"
+      ]
+    },
+    {
+      "id": "editor-container-native",
+      "tag": "editor-container-native",
+      "source": "native-editor",
+      "name": "Container Native",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-dialog",
+      "tag": "editor-dialog",
+      "source": "native-editor",
+      "name": "Dialog",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-form",
+      "tag": "editor-form",
+      "source": "native-editor",
+      "name": "Form",
+      "runtime": "native-web-component",
+      "category": "form",
+      "semanticRole": "form-region",
+      "props": {
+        "title": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array"
+        },
+        "submitLabel": {
+          "type": "string"
+        }
+      },
+      "slots": [
+        "fields",
+        "actions"
+      ],
+      "tokens": [
+        "form.background",
+        "form.field.border",
+        "form.field.radius",
+        "form.gap"
+      ]
+    },
+    {
+      "id": "editor-form-native",
+      "tag": "editor-form-native",
+      "source": "native-editor",
+      "name": "Form Native",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-head",
+      "tag": "editor-head",
+      "source": "native-editor",
+      "name": "Head",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-hero",
+      "tag": "editor-hero",
+      "source": "native-editor",
+      "name": "Hero",
+      "runtime": "native-web-component",
+      "category": "section-pattern",
+      "semanticRole": "intro-section",
+      "props": {
+        "headline": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "imageSrc": {
+          "type": "url",
+          "optional": true
+        },
+        "ctaLabel": {
+          "type": "string",
+          "optional": true
+        }
+      },
+      "slots": [
+        "headline",
+        "body",
+        "media",
+        "actions"
+      ],
+      "tokens": [
+        "hero.background",
+        "hero.text",
+        "hero.gap",
+        "hero.padding"
+      ]
+    },
+    {
+      "id": "editor-hero-native",
+      "tag": "editor-hero-native",
+      "source": "native-editor",
+      "name": "Hero Native",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-image",
+      "tag": "editor-image",
+      "source": "native-editor",
+      "name": "Image",
+      "runtime": "native-web-component",
+      "category": "media",
+      "semanticRole": "image-content",
+      "props": {
+        "src": {
+          "type": "url"
+        },
+        "alt": {
+          "type": "string"
+        },
+        "fit": {
+          "type": "enum",
+          "values": [
+            "cover",
+            "contain",
+            "fill"
+          ]
+        },
+        "opacity": {
+          "type": "number"
+        }
+      },
+      "slots": [],
+      "tokens": [
+        "image.radius",
+        "image.border",
+        "image.shadow"
+      ]
+    },
+    {
+      "id": "editor-image-native",
+      "tag": "editor-image-native",
+      "source": "native-editor",
+      "name": "Image Native",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-import-html-library",
+      "tag": "editor-import-html-library",
+      "source": "native-editor",
+      "name": "Import Html Library",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-info-card",
+      "tag": "editor-info-card",
+      "source": "native-editor",
+      "name": "Info Card",
+      "runtime": "native-web-component",
+      "category": "card",
+      "semanticRole": "content-card",
+      "props": {
+        "heading": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "variant": {
+          "type": "enum",
+          "values": [
+            "standard",
+            "featured",
+            "quiet"
+          ]
+        }
+      },
+      "slots": [
+        "heading",
+        "body",
+        "media",
+        "actions"
+      ],
+      "tokens": [
+        "card.background",
+        "card.text",
+        "card.border",
+        "card.radius",
+        "card.padding"
+      ]
+    },
+    {
+      "id": "editor-info-card-native",
+      "tag": "editor-info-card-native",
+      "source": "native-editor",
+      "name": "Info Card Native",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-main",
+      "tag": "editor-main",
+      "source": "native-editor",
+      "name": "Main",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-menu",
+      "tag": "editor-menu",
+      "source": "native-editor",
+      "name": "Menu / Navigation",
+      "runtime": "native-web-component",
+      "category": "navigation",
+      "semanticRole": "primary-navigation",
+      "props": {
+        "brand": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array"
+        },
+        "sticky": {
+          "type": "boolean"
+        },
+        "tone": {
+          "type": "enum",
+          "values": [
+            "light",
+            "dark"
+          ]
+        }
+      },
+      "slots": [
+        "brand",
+        "items",
+        "actions"
+      ],
+      "tokens": [
+        "menu.background",
+        "menu.text",
+        "menu.gap",
+        "menu.height"
+      ]
+    },
+    {
+      "id": "editor-menu-native",
+      "tag": "editor-menu-native",
+      "source": "native-editor",
+      "name": "Menu Native",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-meta",
+      "tag": "editor-meta",
+      "source": "native-editor",
+      "name": "Meta",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-modal",
+      "tag": "editor-modal",
+      "source": "native-editor",
+      "name": "Modal",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-only",
+      "tag": "editor-only",
+      "source": "native-editor",
+      "name": "Only",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-preview",
+      "tag": "editor-preview",
+      "source": "native-editor",
+      "name": "Preview",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-project",
+      "tag": "editor-project",
+      "source": "native-editor",
+      "name": "Project",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-project-library-v1",
+      "tag": "editor-project-library-v1",
+      "source": "native-editor",
+      "name": "Project Library V1",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-schema",
+      "tag": "editor-schema",
+      "source": "native-editor",
+      "name": "Schema",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-section",
+      "tag": "editor-section",
+      "source": "native-editor",
+      "name": "Section",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-selection-shell",
+      "tag": "editor-selection-shell",
+      "source": "native-editor",
+      "name": "Selection Shell",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-shell",
+      "tag": "editor-shell",
+      "source": "native-editor",
+      "name": "Shell",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-side",
+      "tag": "editor-side",
+      "source": "native-editor",
+      "name": "Side",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-slot",
+      "tag": "editor-slot",
+      "source": "native-editor",
+      "name": "Slot",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-source",
+      "tag": "editor-source",
+      "source": "native-editor",
+      "name": "Source",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-stat",
+      "tag": "editor-stat",
+      "source": "native-editor",
+      "name": "Stat",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-text",
+      "tag": "editor-text",
+      "source": "native-editor",
+      "name": "Text Block",
+      "runtime": "native-web-component",
+      "category": "content",
+      "semanticRole": "text-content",
+      "props": {
+        "text": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "enum",
+          "values": [
+            "p",
+            "span",
+            "h1",
+            "h2",
+            "h3",
+            "h4"
+          ]
+        },
+        "align": {
+          "type": "enum",
+          "values": [
+            "left",
+            "center",
+            "right"
+          ]
+        }
+      },
+      "slots": [
+        "default"
+      ],
+      "tokens": [
+        "text.color",
+        "text.font",
+        "text.size",
+        "text.lineHeight",
+        "text.weight"
+      ]
+    },
+    {
+      "id": "editor-text-native",
+      "tag": "editor-text-native",
+      "source": "native-editor",
+      "name": "Text Native",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-title",
+      "tag": "editor-title",
+      "source": "native-editor",
+      "name": "Title",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-wrapper",
+      "tag": "editor-wrapper",
+      "source": "native-editor",
+      "name": "Wrapper",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "editor-xray",
+      "tag": "editor-xray",
+      "source": "native-editor",
+      "name": "Xray",
+      "runtime": "native-web-component",
+      "category": "unknown",
+      "semanticRole": "component",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": []
+    },
+    {
+      "id": "sp-button",
+      "tag": "sp-button",
+      "name": "Spectrum Button",
+      "runtime": "web-component",
+      "source": "adobe-spectrum",
+      "category": "spectrum",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": [],
+      "status": "placeholder-contract"
+    },
+    {
+      "id": "sp-accordion",
+      "tag": "sp-accordion",
+      "name": "Spectrum Accordion",
+      "runtime": "web-component",
+      "source": "adobe-spectrum",
+      "category": "spectrum",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": [],
+      "status": "placeholder-contract"
+    },
+    {
+      "id": "sp-dialog",
+      "tag": "sp-dialog",
+      "name": "Spectrum Dialog",
+      "runtime": "web-component",
+      "source": "adobe-spectrum",
+      "category": "spectrum",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": [],
+      "status": "placeholder-contract"
+    },
+    {
+      "id": "sp-tabs",
+      "tag": "sp-tabs",
+      "name": "Spectrum Tabs",
+      "runtime": "web-component",
+      "source": "adobe-spectrum",
+      "category": "spectrum",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": [],
+      "status": "placeholder-contract"
+    },
+    {
+      "id": "sp-picker",
+      "tag": "sp-picker",
+      "name": "Spectrum Picker",
+      "runtime": "web-component",
+      "source": "adobe-spectrum",
+      "category": "spectrum",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": [],
+      "status": "placeholder-contract"
+    },
+    {
+      "id": "sp-progress-circle",
+      "tag": "sp-progress-circle",
+      "name": "Spectrum Progress Circle",
+      "runtime": "web-component",
+      "source": "adobe-spectrum",
+      "category": "spectrum",
+      "props": {},
+      "slots": [
+        "default"
+      ],
+      "tokens": [],
+      "status": "placeholder-contract"
+    }
+  ],
+  "notes": [
+    "Safe sidecar only: no application code was injected.",
+    "Next step can import this JSON into a dialog or developer handoff after the app remains stable."
+  ]
+}

@@ -1,0 +1,589 @@
+<html lang="en">
+<!--
+SPECTRUM BASELINE FREEZE
+Version: spectrum-baseline-picker-stable
+Date: 2026-05-29
+Status: Stable checkpoint after Picker integration.
+
+Working Spectrum components at this checkpoint:
+- Spectrum Button
+- Spectrum Progress Circle
+- Spectrum Accordion
+- Spectrum Tabs
+- Spectrum Dialog
+- Spectrum Toast / Notification
+- Spectrum Picker / Dropdown
+
+Do not add new Spectrum components until the add-component pattern is followed:
+1. Register source schema.
+2. Register token bindings.
+3. Register preset metadata.
+4. Register editor plugin.
+5. Add palette trigger.
+6. Confirm canvas interaction.
+7. Confirm export parity.
+8. Confirm audit: schema id, bindings, preset.
+-->
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minimal Section-First Editor</title>
+<link href="styles.css" rel="stylesheet"/>
+<script src="https://jspm.dev/@spectrum-web-components/bundle/elements.js" type="module"></script>
+</head>
+<body>
+<div class="topbar">
+<div class="topbar-title">Structured UX Editor</div>
+<div aria-label="Primary editor actions" class="topbar-actions topbar-actions-clean">
+<details class="topbar-menu toolbar-group-menu" id="fileMenu">
+<summary class="btn" role="button">File ▾</summary>
+<div aria-label="File actions" class="topbar-menu-panel toolbar-menu-panel">
+<div class="toolbar-menu-heading">Project</div>
+<button class="btn primary" id="saveProjectLibraryBtn" title="Save this editable canvas as a named project version in this browser" type="button">Save Version</button>
+<button class="btn" id="loadProjectBtnTop" onclick="document.getElementById('loadProjectBtn')?.click()" title="Open saved project versions stored in this browser" type="button">Project Versions</button>
+<button class="btn" id="loadProjectBtn" title="Open saved project versions stored in this browser" type="button">Open Version</button>
+<button class="btn" id="saveBtn" title="Save this editable project in this browser only" type="button">Save Browser Copy</button>
+<button class="btn" id="saveProjectBtn" title="Download an editable .json project backup" type="button">Download JSON Backup</button>
+<div class="toolbar-menu-heading">Output</div>
+<button class="btn primary" id="exportBtn" title="Export the finished standalone website HTML" type="button">Export HTML</button>
+<button class="btn" id="exportDeveloperHandoffBtn" title="Export composition JSON and readable developer handoff notes" type="button">Export Developer Handoff</button>
+<button class="btn" id="exportCheckBtn" title="Run a readable export readiness checklist before downloading" type="button">Export Check</button>
+<button class="btn" id="spectrumAuditExportBtn" title="Download Spectrum governance status, schema ids, presets, and token bindings" type="button">Spectrum Report</button>
+</div>
+</details>
+<details class="topbar-menu toolbar-group-menu" id="viewMenu">
+<summary class="btn" role="button">View ▾</summary>
+<div aria-label="View actions" class="topbar-menu-panel toolbar-menu-panel">
+<button class="btn" id="demoModeBtn" title="Hide editor panels and present the current canvas" type="button">Demo Mode</button>
+<button class="btn" id="semanticMapToggleBtn" title="Show semantic section and component labels on the canvas" type="button">Structure Map</button>
+<button class="btn" id="themeToggleBtn" type="button">Dark Mode</button>
+<div class="toolbar-menu-heading">Zoom</div>
+<div aria-label="Canvas zoom controls" class="zoom-controls" id="canvasZoomControls">
+<button class="btn" id="zoomOutBtn" title="Zoom out" type="button">−</button>
+<div class="zoom-readout" id="zoomReadout">100%</div>
+<button class="btn" id="zoomResetBtn" title="Reset zoom" type="button">Reset</button>
+<button class="btn" id="zoomInBtn" title="Zoom in" type="button">+</button>
+</div>
+</div>
+</details>
+<details class="topbar-menu toolbar-group-menu" id="designMenu">
+<summary class="btn" role="button">Design ▾</summary>
+<div aria-label="Design actions" class="topbar-menu-panel toolbar-menu-panel">
+<button class="btn" id="designSystemBtn" title="Edit design system tokens and component styles" type="button">Design System</button>
+<button class="btn" id="designSystemPopoutBtn" title="Open Design System in a separate browser window" type="button">Pop Out Design System</button>
+</div>
+</details>
+<details class="topbar-menu toolbar-group-menu" id="editMenu">
+<summary class="btn" role="button">Edit ▾</summary>
+<div aria-label="Edit actions" class="topbar-menu-panel toolbar-menu-panel">
+<button class="btn" disabled="" id="undoBtn" title="Undo last change" type="button">↶ Undo</button>
+<button class="btn" disabled="" id="redoBtn" title="Redo last undone change" type="button">↷ Redo</button>
+<button class="btn" id="duplicateSelectedBtnTop" title="Duplicate the selected section or component" type="button">Duplicate</button>
+<button class="btn danger" id="deleteBtnTop" title="Delete the selected section or component" type="button">Delete Selected</button>
+</div>
+</details>
+<details class="topbar-menu toolbar-group-menu" id="toolsMenu">
+<summary class="btn" role="button">Tools ▾</summary>
+<div aria-label="Test and diagnostic tools" class="topbar-menu-panel toolbar-menu-panel">
+<button class="btn" id="testPageBtn" title="Create a complete starter page for quick canvas/export testing" type="button">Create Test Page</button>
+<button class="btn" id="domCheckBtn" title="Check canvas DOM structure against editor state" type="button">DOM Check</button>
+<button class="btn" id="importHtmlBtn" style="display:none !important;" title="Legacy quick paste importer" type="button">Quick Import (legacy)</button>
+</div>
+</details>
+<div aria-label="Quick edit actions" class="topbar-split-actions">
+<button class="topbar-split-btn danger" id="quickDeleteBtn" title="Delete selected" type="button">Delete</button>
+<span aria-hidden="true" class="topbar-split-divider"></span>
+<button class="topbar-split-btn" id="quickUndoBtn" title="Undo last change" type="button">Undo</button>
+</div>
+<input accept="application/json,.json" hidden="" id="loadProjectFileInput" type="file"/>
+</div>
+</div>
+<div aria-labelledby="developerHandoffTitle" aria-modal="true" class="developer-handoff-modal" id="developerHandoffModal" role="dialog">
+<div class="developer-handoff-dialog is-draggable" id="developerHandoffDialog">
+<div class="developer-handoff-header" id="developerHandoffDragHandle">
+<div>
+<div class="developer-handoff-title" id="developerHandoffTitle">Developer Handoff Preview</div>
+<div class="developer-handoff-subtitle">Review the live visual preview, implementation structure, content inventory, tokens, risks, AI prompt, and export files before downloading the handoff package.</div>
+</div>
+<button class="btn" id="developerHandoffCloseBtn" type="button">Close</button>
+</div>
+<div aria-label="Developer handoff preview tabs" class="developer-handoff-tabs" role="tablist">
+<button class="developer-handoff-tab active" data-handoff-tab="summary" type="button">Summary</button>
+<button class="developer-handoff-tab" data-handoff-tab="preview" type="button">Live Preview</button>
+<button class="developer-handoff-tab" data-handoff-tab="content" type="button">Content Inventory</button>
+<button class="developer-handoff-tab" data-handoff-tab="risks" type="button">Issues / Risks</button>
+<button class="developer-handoff-tab" data-handoff-tab="architecture" type="button">Architecture Map</button>
+<button class="developer-handoff-tab" data-handoff-tab="frameworks" type="button">Framework Mapping</button>
+<button class="developer-handoff-tab" data-handoff-tab="contracts" type="button">Component Contracts</button>
+<button class="developer-handoff-tab" data-handoff-tab="responsive" type="button">Responsive Simulator</button>
+<button class="developer-handoff-tab" data-handoff-tab="tokens" type="button">Token Inspector</button>
+<button class="developer-handoff-tab" data-handoff-tab="accessibility" type="button">Accessibility Summary</button>
+<button class="developer-handoff-tab" data-handoff-tab="notes" type="button">Developer Notes</button>
+<button class="developer-handoff-tab" data-handoff-tab="ai" type="button">AI Prompt</button>
+<button class="developer-handoff-tab" data-handoff-tab="readiness" type="button">Readiness Score</button>
+<button class="developer-handoff-tab" data-handoff-tab="json" type="button">Composition JSON</button>
+<button class="developer-handoff-tab" data-handoff-tab="markdown" type="button">Markdown Notes</button>
+<button class="developer-handoff-tab" data-handoff-tab="files" type="button">Export Files</button>
+</div>
+<div class="developer-handoff-body">
+<section class="developer-handoff-panel active" data-handoff-panel="summary" id="developerHandoffSummaryPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="preview" id="developerHandoffPreviewPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="content" id="developerHandoffContentPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="risks" id="developerHandoffRisksPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="architecture" id="developerHandoffArchitecturePanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="frameworks" id="developerHandoffFrameworkPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="contracts" id="developerHandoffContractsPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="responsive" id="developerHandoffResponsivePanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="tokens" id="developerHandoffTokenPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="accessibility" id="developerHandoffAccessibilityPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="notes" id="developerHandoffNotesPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="ai" id="developerHandoffAiPromptPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="readiness" id="developerHandoffReadinessPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="json">
+<textarea class="developer-handoff-code" id="developerHandoffJsonText" spellcheck="false"></textarea>
+</section>
+<section class="developer-handoff-panel" data-handoff-panel="markdown">
+<textarea class="developer-handoff-code" id="developerHandoffMarkdownText" spellcheck="false"></textarea>
+</section>
+<section class="developer-handoff-panel" data-handoff-panel="files" id="developerHandoffFilesPanel"></section>
+</div>
+<div class="developer-handoff-footer">
+<div class="developer-handoff-note">This preview is meant to make the handoff readable before export. The HTML remains the visual reference; JSON and Markdown carry the developer intent.</div>
+<div class="developer-handoff-actions">
+<button class="btn" id="developerHandoffPopoutBtn" type="button">Pop Out</button>
+<button class="btn" id="developerHandoffDownloadPreviewBtn" type="button">Download Preview HTML</button>
+<button class="btn" id="developerHandoffDownloadJsonBtn" type="button">Download JSON</button>
+<button class="btn" id="developerHandoffDownloadMarkdownBtn" type="button">Download Markdown</button>
+<button class="btn" id="developerHandoffDownloadAiPromptFooterBtn" type="button">Download AI Prompt</button>
+<button class="btn primary" id="developerHandoffDownloadAllBtn" type="button">Download Package</button>
+</div>
+</div>
+</div>
+</div>
+<aside id="left">
+<div class="panel-tabs" id="leftTabs">
+<button class="panel-tab-btn active" data-left-tab="add" title="Add sections, components, and imports" type="button">Components</button>
+<button class="panel-tab-btn" data-left-tab="canvas" title="Adjust canvas and section layout" type="button">Layout</button>
+<button class="panel-tab-btn" data-left-tab="xray" title="View and manage page structure" type="button">Outline</button>
+</div>
+<div class="panel-tab-panel" data-left-panel="add">
+<h2>Components</h2>
+<div class="hint">Drag a component into the section on the canvas.</div>
+<div class="group"><button aria-controls="componentsPanel" aria-expanded="false" class="btn template-toggle-btn" id="componentsToggle" type="button"><span><span class="palette-icon">▦</span>Components</span><span class="template-chevron">▼</span></button>
+<div class="template-list-panel hidden" id="componentsPanel">
+<div class="hint">Drag components into sections or onto the canvas.</div>
+<button class="palette-item" data-add="section" draggable="true"><span class="palette-icon">▦</span>Blank Section</button>
+<button class="palette-item" data-add="card" draggable="true"><span class="palette-icon">🪪</span>Info Card</button>
+<button class="palette-item" data-add="hero" draggable="true"><span class="palette-icon">▣</span>Hero</button>
+<button class="palette-item" data-add="text" draggable="true"><span class="palette-icon">T</span>Text Box</button>
+<button class="palette-item" data-add="menu" draggable="true"><span class="palette-icon">☰</span>Menu</button>
+<button class="palette-item" data-add="form" draggable="true"><span class="palette-icon">✎</span>Form</button>
+<button class="palette-item" data-add="image" draggable="true"><span class="palette-icon">🖼</span>Image</button>
+<button class="palette-item" data-add="container" draggable="true"><span class="palette-icon">▤</span>Container / Stack</button>
+<button class="palette-item" data-add="button" draggable="true"><span class="palette-icon">●</span>Button</button>
+<div class="components-import-library-list" id="componentsImportLibraryList"></div>
+</div>
+<div class="group" id="leftPluginGroup">
+<button aria-expanded="true" class="btn template-toggle-btn" id="pluginsToggleBtn" type="button">
+<span><span class="palette-icon">◧</span> Adobe Spectrum</span>
+<span class="template-chevron">⌄</span>
+</button>
+<div class="template-list-panel" id="leftPluginsPanel">
+<button class="palette-item" id="leftSpectrumButtonPlugin" type="button">
+<span class="palette-icon">◧</span>
+              Button
+            </button>
+<button class="palette-item" id="leftSpectrumTextFieldPlugin" type="button">
+<span class="palette-icon">⌨</span>
+              Text Field
+            </button>
+<button class="palette-item" id="leftSpectrumCheckboxPlugin" type="button">
+<span class="palette-icon">☑</span>
+              Checkbox
+            </button>
+<button class="palette-item" id="leftSpectrumSwitchPlugin" type="button">
+<span class="palette-icon">⏽</span>
+              Switch
+            </button>
+<button class="palette-item" id="leftSpectrumSliderPlugin" type="button">
+<span class="palette-icon">↔</span>
+              Slider
+            </button>
+<button class="palette-item" id="leftSpectrumProgressCirclePlugin" type="button">
+<span class="palette-icon">◌</span>
+              Progress Circle
+            </button>
+<button class="palette-item" id="leftSpectrumAccordionPlugin" type="button">
+<span class="palette-icon">▾</span>
+              Accordion
+            </button>
+<button class="palette-item" id="leftSpectrumTabsPlugin" type="button">
+<span class="palette-icon">▥</span>
+              Tabs
+            </button>
+<button class="palette-item" id="leftSpectrumDialogPlugin" type="button">
+<span class="palette-icon">▣</span>
+              Dialog
+            </button>
+<button class="palette-item" id="leftSpectrumToastPlugin" type="button">
+<span class="palette-icon">◉</span>
+              Toast / Notification
+            </button>
+<button class="palette-item" id="leftSpectrumPickerPlugin" type="button">
+<span class="palette-icon">⌄</span>
+              Picker / Dropdown
+            </button>
+<div class="hint" style="margin-top:8px;margin-bottom:0;">
+              External Web Component. Click to add to canvas; edit and delete from Properties.
+            </div>
+</div>
+</div>
+</div><div class="group">
+<button aria-controls="sectionTemplatesPanel" aria-expanded="false" class="btn template-toggle-btn" id="sectionTemplatesToggle" type="button">
+<span><span class="palette-icon">▧</span>Section Starters</span>
+<span class="template-chevron">▼</span>
+</button>
+<div class="template-list-panel hidden" id="sectionTemplatesPanel">
+<div class="hint">Prebuilt section layouts. Drag one onto the canvas, or click to add it.</div>
+<button class="palette-item" data-template-drag="hero-image-right"><span class="palette-icon">▧</span>Hero — Image Right</button>
+<button class="palette-item" data-template-drag="feature-row"><span class="palette-icon">▦</span>3-Card Feature Row</button>
+<button class="palette-item" data-template-drag="image-text-split"><span class="palette-icon">◧</span>Image + Text Split</button>
+<button class="palette-item" data-template-drag="robust-image-button-row"><span class="palette-icon">▤</span>Robust Image + Button Row</button>
+<button class="palette-item" data-template-drag="robust-split-content-actions"><span class="palette-icon">◨</span>Robust Split + Actions</button>
+<button class="palette-item" data-template-drag="robust-centered-cta"><span class="palette-icon">◎</span>Robust Centered CTA</button>
+<button class="palette-item" data-template-drag="robust-card-action-row"><span class="palette-icon">▥</span>Robust Card + Action Row</button>
+<button class="palette-item" data-template-drag="cta-banner"><span class="palette-icon">⬒</span>CTA Banner</button>
+<button class="palette-item" data-template-drag="contact-layout"><span class="palette-icon">✎</span>Contact Layout</button>
+<button class="palette-item" data-template-drag="gallery-row"><span class="palette-icon">▥</span>Gallery Row</button>
+<button class="palette-item" data-template-drag="hero-overlay"><span class="palette-icon">▣</span>Hero Overlay</button>
+<button class="palette-item" data-template-drag="feature-alternating"><span class="palette-icon">↔</span>Feature Alternating</button>
+<button class="palette-item" data-template-drag="landing-starter"><span class="palette-icon">▤</span>Landing Starter</button>
+<button class="palette-item" data-template-drag="dashboard-layout"><span class="palette-icon">▨</span>Dashboard Layout</button>
+<button class="palette-item" data-template-drag="cta-split-strong"><span class="palette-icon">⬒</span>CTA Split Strong</button>
+<button class="palette-item" data-template-drag="vertical-stack"><span class="palette-icon">↕</span>Vertical Stack</button>
+<button class="palette-item" data-template-drag="horizontal-row"><span class="palette-icon">↔</span>Horizontal Row</button>
+<button class="palette-item" data-template-drag="centered-content"><span class="palette-icon">◎</span>Centered Content</button>
+<button class="palette-item" data-template-drag="button-group"><span class="palette-icon">●</span>Button Group</button>
+<button class="palette-item" data-template-drag="form-stack"><span class="palette-icon">✎</span>Form Stack</button>
+<button class="palette-item" data-template-drag="card-layout"><span class="palette-icon">▥</span>Card Layout</button>
+<button class="palette-item" data-template-drag="equal-spacing"><span class="palette-icon">⋯</span>Equal Spacing</button>
+<button class="palette-item" data-template-drag="top-alignment"><span class="palette-icon">⇡</span>Top Aligned Stack</button>
+<button class="palette-item" data-template-drag="center-alignment"><span class="palette-icon">↕</span>Center Aligned Stack</button>
+<button class="palette-item" data-template-drag="bottom-alignment"><span class="palette-icon">⇣</span>Bottom Aligned Stack</button>
+</div>
+</div>
+<div class="group saved-imports-hidden" id="importLibraryGroup"><button aria-controls="importLibraryPanel" aria-expanded="false" class="btn template-toggle-btn" id="importLibraryToggle" style="display:none !important;" type="button"><span><span class="palette-icon">▤</span>Saved Imports</span><span class="template-chevron">▼</span></button>
+<div class="template-list-panel hidden" id="importLibraryPanel">
+<div class="hint">Reusable imported blocks you saved. Drag a saved block into any section.</div>
+<div class="import-library-actions">
+<button class="btn primary" id="openImportStudioBtn" style="display:none !important;" type="button">New Import</button>
+<button class="btn" id="exportImportLibraryBtn" style="display:none !important;" type="button">Download Library Backup</button>
+<button class="btn" id="mergeImportLibraryBtn" style="display:none !important;" type="button">Merge Library Backup</button>
+<button class="btn" id="replaceImportLibraryBtn" style="display:none !important;" type="button">Replace Library From Backup</button>
+<input accept="application/json,.json" class="import-library-file-input" id="importLibraryFileInput" type="file"/>
+<div class="import-library-status" id="importLibraryTransferStatus">Use <strong>New Import</strong> for new blocks. Backup tools are for moving your saved import library between browsers.</div>
+</div>
+<div aria-label="Filter saved imported blocks" class="import-library-filter">
+<label for="importLibrarySearch">Search library</label>
+<input autocomplete="off" id="importLibrarySearch" placeholder="Search name, category, tags, notes, or HTML..." type="search"/>
+<div class="row">
+<div><label for="importLibraryCategoryFilter">Category</label><select id="importLibraryCategoryFilter"><option value="">All categories</option></select></div>
+<div><label for="importLibrarySort">Sort</label><select id="importLibrarySort"><option value="updated">Recently updated</option><option value="title">Name A-Z</option><option value="category">Category</option></select></div>
+</div>
+</div>
+<div class="import-library-list" id="importLibraryList">
+<div class="import-library-empty">No saved imported blocks yet.</div>
+</div>
+</div></div>
+<div aria-hidden="true" class="import-library-detail-modal" id="importLibraryDetailModal">
+<div aria-labelledby="importLibraryDetailTitle" aria-modal="true" class="import-library-detail-dialog" role="dialog">
+<div class="import-library-detail-main">
+<div class="import-library-detail-head">
+<div>
+<h3 class="import-library-detail-title" id="importLibraryDetailTitle">Saved Import Details</h3>
+<div class="import-library-detail-meta" id="importLibraryDetailMeta">Reusable imported HTML block</div>
+</div>
+<button class="btn import-library-detail-close" id="importLibraryDetailClose" style="display:none !important;" type="button">Close</button>
+</div>
+<label>Display name</label>
+<input id="importLibraryDetailName" type="text" value=""/>
+<div class="import-library-meta-fields">
+<div><label for="importLibraryDetailCategory">Category</label><input id="importLibraryDetailCategory" placeholder="Hero, Card, CTA, Navigation..." type="text"/></div>
+<div><label for="importLibraryDetailTags">Tags</label><input id="importLibraryDetailTags" placeholder="Comma-separated tags" type="text"/></div>
+</div>
+<label style="margin-top:12px;">Notes</label>
+<textarea id="importLibraryDetailNotes" placeholder="How this block should be used, dependencies, or design notes." style="min-height:70px;"></textarea>
+<label style="margin-top:12px;">HTML source</label>
+<textarea class="import-library-detail-source" id="importLibraryDetailSource"></textarea>
+</div>
+<div class="import-library-detail-side">
+<h4>Preview</h4>
+<span class="import-preview-shell import-library-detail-preview"><iframe class="import-preview-frame" id="importLibraryDetailPreview" sandbox="" tabindex="-1" title="Imported block detail preview"></iframe></span>
+<div class="import-preview-mode-card">
+<div class="import-preview-mode-title">Preview Mode</div>
+<div class="import-preview-mode-actions">
+<button class="btn active" id="importLibraryPreviewStatic" style="display:none !important;" type="button">Static Safe</button>
+<button class="btn" id="importLibraryPreviewInteractive" style="display:none !important;" type="button">Run in Sandbox</button>
+</div>
+<div class="import-preview-mode-status" id="importLibraryPreviewModeStatus">Scripts are off. HTML and CSS are previewed only.</div>
+</div>
+<div class="import-preview-mode-card" id="importLibraryTokenTestCard" style="margin-top:12px;">
+<div class="import-preview-mode-title">Style Imported Component</div>
+<div class="hint" style="margin-bottom:10px;">Choose a preset first. Use Fine Tune only when you need to adjust one visual part. Then use <strong>Save + update canvas</strong> below.</div>
+<div class="import-preview-mode-status" id="importTokenBridgeLiveStatus" style="display:block;margin:10px 0 12px;padding:10px 12px;border:1px solid var(--brand);border-radius:12px;background:var(--brand-soft);color:var(--text);font-weight:800;line-height:1.35;">Step 1: Choose a Theme Preset, then click Preview preset.</div>
+<div class="import-preview-mode-card" style="margin:10px 0;padding:10px;background:color-mix(in srgb, var(--panel) 84%, var(--soft) 16%);">
+<div class="import-preview-mode-title">1. Theme Preset</div>
+<label for="importLibraryTokenPreset">Preset</label>
+<select id="importLibraryTokenPreset">
+<option value="brand">Brand system</option>
+<option value="success">Success system</option>
+<option value="warning">Warning system</option>
+<option value="danger">Danger system</option>
+<option value="info">Info system</option>
+</select>
+<button class="btn primary" id="importLibraryApplyTokenPreset" style="margin-top:10px;" type="button">Preview preset</button>
+<div class="import-preview-mode-status" id="importLibraryTokenPresetStatus" style="margin-top:8px;">Best first step. Presets try accent, surface, text, and border together.</div>
+</div>
+<details class="import-preview-mode-card" style="margin:10px 0;padding:10px;background:color-mix(in srgb, var(--panel) 90%, var(--soft) 10%);">
+<summary class="import-preview-mode-title" style="cursor:pointer;">Fine Tune one token</summary>
+<div class="hint" style="margin:8px 0;">Use this when one part of the component needs a different token.</div>
+<label for="importLibraryTokenAttr">Target to style</label>
+<select id="importLibraryTokenAttr">
+<option value="accent">Accent / primary visual hook</option>
+<option value="background">Background</option>
+<option value="surface">Surface / card fill</option>
+<option value="text">Text / foreground</option>
+<option value="border">Border / outline</option>
+<option value="color">General color</option>
+</select>
+<label for="importLibraryTokenValue" style="margin-top:8px;">Token value</label>
+<select id="importLibraryTokenValue">
+<option value="#4f46e5">Brand</option>
+<option value="#16a34a">Success</option>
+<option value="#f59e0b">Warning</option>
+<option value="#dc2626">Danger</option>
+<option value="#0ea5e9">Info</option>
+<option value="#1f2937">Text</option>
+<option value="#ffffff">Surface</option>
+<option value="#dbe4ee">Border</option>
+</select>
+<button class="btn" id="importLibraryApplyTokenToSource" style="margin-top:10px;" type="button">Preview single token</button>
+<div class="import-preview-mode-status" id="importLibraryTokenStatus" style="margin-top:8px;">Single-token changes update the source and preview. Save when it looks right.</div>
+</details>
+<div class="import-preview-mode-card" style="margin:10px 0;padding:10px;background:color-mix(in srgb, var(--brand-soft) 38%, var(--panel) 62%);">
+<div class="import-preview-mode-title">2. Save</div>
+<div class="import-preview-mode-status">When the preview looks right, click <strong>Save + update canvas</strong> in the buttons below. That carries the styled component to canvas and export.</div>
+<div class="import-preview-mode-status" id="importLibraryTokenWorkflowStatus" style="margin-top:8px;font-weight:800;color:var(--brand);">No token preview applied yet.</div>
+</div>
+<details class="import-preview-mode-card" id="importLibraryTokenCompatibilityCard" style="margin:10px 0;padding:10px;background:color-mix(in srgb, var(--panel) 82%, var(--soft) 18%);">
+<summary class="import-preview-mode-title" style="cursor:pointer;">Advanced compatibility details</summary>
+<div class="hint" style="margin:8px 0;">Use this only when a preset does not visually affect the part of the component you expected.</div>
+<div class="import-preview-mode-status" id="importLibraryTokenCompatibilityList">Open an imported block and click Refresh checklist.</div>
+<div class="import-preview-mode-status" id="importLibraryTokenSuggestedMapping" style="margin-top:8px;">Suggested mapping will appear here.</div>
+<button class="btn" id="importLibraryRefreshCompatibility" style="margin-top:10px;" type="button">Refresh checklist</button>
+</details>
+</div>
+<div class="import-library-detail-stat"><strong>Type</strong><span>Imported HTML Block</span></div>
+<div id="importLibraryDetailReadiness"></div>
+<div class="import-library-detail-stat"><strong>Usage</strong><span id="importLibraryDetailUsage">0 placed instance(s)</span></div>
+<div class="import-library-detail-stat"><strong>Updated</strong><span id="importLibraryDetailUpdated">—</span></div>
+<div class="token-next-step-callout" id="importTokenBridgeNextStepCallout">Next: choose a preset above, then preview it.</div>
+<div class="import-library-detail-actions">
+<button class="btn primary" id="importLibraryDetailSave" style="display:none !important;" type="button">Save + update canvas</button>
+<button class="btn" id="importLibraryDetailAdd" style="display:none !important;" type="button">Add to selected target</button>
+<button class="btn" id="importLibraryDetailSync" style="display:none !important;" type="button">Apply saved source to linked canvas blocks</button>
+<button class="btn" id="importLibraryDetailDuplicate" style="display:none !important;" type="button">Duplicate block</button>
+<button class="btn danger" id="importLibraryDetailDelete" style="display:none !important;" type="button">Delete from library</button>
+</div>
+<div class="hint" style="margin-top:10px;">Token changes first update the source/preview. Use <strong>Save + update canvas</strong> to make the edited library block carry through to canvas and export.</div>
+</div>
+</div>
+</div>
+<div aria-hidden="true" class="import-source-editor-modal" id="importSourceEditorModal">
+<div aria-labelledby="importSourceEditorTitle" aria-modal="true" class="import-source-editor-dialog" role="dialog">
+<div class="import-source-editor-main">
+<div class="import-source-editor-head">
+<div>
+<h3 class="import-source-editor-title" id="importSourceEditorTitle">Placed Import Source</h3>
+<div class="import-source-editor-meta" id="importSourceEditorMeta">Edit the selected placed imported block directly.</div>
+</div>
+<button class="btn import-source-editor-close" id="importSourceEditorClose" style="display:none !important;" type="button">Close</button>
+</div>
+<label>Display name</label>
+<input id="importSourceEditorName" type="text" value=""/>
+<label style="margin-top:12px;">HTML source</label>
+<textarea class="import-source-editor-source" id="importSourceEditorSource"></textarea>
+</div>
+<div class="import-source-editor-side">
+<h4>Live Preview</h4>
+<span class="import-preview-shell import-source-editor-preview"><iframe class="import-preview-frame" id="importSourceEditorPreview" sandbox="" tabindex="-1" title="Selected imported block source preview"></iframe></span>
+<div class="import-preview-mode-card">
+<div class="import-preview-mode-title">Preview Mode</div>
+<div class="import-preview-mode-actions">
+<button class="btn active" id="importSourcePreviewStatic" style="display:none !important;" type="button">Static Safe</button>
+<button class="btn" id="importSourcePreviewInteractive" style="display:none !important;" type="button">Run in Sandbox</button>
+</div>
+<div class="import-preview-mode-status" id="importSourcePreviewModeStatus">Scripts are off. HTML and CSS are previewed only.</div>
+</div>
+<div class="import-source-editor-stat"><strong>Instance</strong><span id="importSourceEditorInstanceStatus">Selected imported block</span></div>
+<div class="import-source-editor-stat"><strong>Library link</strong><span id="importSourceEditorLinkStatus">—</span></div>
+<div id="importSourceEditorReadiness"></div>
+<div class="import-source-editor-actions">
+<button class="btn primary" id="importSourceEditorApply" style="display:none !important;" type="button">Apply to This Instance</button>
+<button class="btn primary" id="importSourceEditorApplyLinked" style="display:none !important;" type="button">Apply + Update Linked Library</button>
+<button class="btn" id="importSourceEditorSaveCopy" style="display:none !important;" type="button">Save Copy to Saved Imports</button>
+<button class="btn" id="importSourceEditorRefreshPreview" style="display:none !important;" type="button">Refresh Preview</button>
+</div>
+<div class="hint" style="margin-top:10px;">Use this larger editor when the right-panel source field is too small. Wrapper styles stay on the placed instance.</div>
+</div>
+</div>
+</div>
+</div>
+<div class="panel-tab-panel hidden" data-left-panel="canvas">
+<h2>Layout</h2>
+<div class="hint">Control canvas size, section grids, rows, columns, and responsive behavior.</div>
+<div class="group">
+<h4>Resolution</h4>
+<div class="resolution-grid" id="resolutionControls"></div>
+<div class="xsmall muted" id="resolutionStatus" style="margin-top:8px;">Canvas width: responsive</div>
+</div>
+<div class="group" id="leftPanel"></div>
+</div>
+<div class="panel-tab-panel hidden" data-left-panel="xray">
+<h2>Outline</h2>
+<div class="hint">Select, inspect, delete, and lightly reorder the page structure.</div>
+<div class="group">
+<h4>Quick Add</h4>
+<div class="hint">Fast placement shortcuts for the selected page structure below.</div>
+<div class="xray-toolbar">
+<button class="btn" id="xrayExpandAllBtn" onclick="expandAllXray()" type="button">Expand all</button>
+<button class="btn" id="xrayCollapseAllBtn" onclick="collapseAllXray()" type="button">Collapse all</button>
+<button class="btn" id="xrayShowCellsBtn" onclick="toggleXrayCells()" type="button">Show cells</button>
+</div>
+<div aria-label="Quick draggable components" class="xray-component-strip">
+<button class="palette-item" data-add="section" draggable="true" title="Blank Section"><span class="palette-icon">▦</span>Section</button>
+<button class="palette-item" data-add="card" draggable="true" title="Info Card"><span class="palette-icon">🪪</span>Card</button>
+<button class="palette-item" data-add="hero" draggable="true" title="Hero"><span class="palette-icon">▣</span>Hero</button>
+<button class="palette-item" data-add="text" draggable="true" title="Text Box"><span class="palette-icon">T</span>Text</button>
+<button class="palette-item" data-add="menu" draggable="true" title="Menu"><span class="palette-icon">☰</span>Menu</button>
+<button class="palette-item" data-add="form" draggable="true" title="Form"><span class="palette-icon">✎</span>Form</button>
+<button class="palette-item" data-add="image" draggable="true" title="Image"><span class="palette-icon">🖼</span>Image</button>
+<button class="palette-item" data-add="container" draggable="true" title="Container / Stack"><span class="palette-icon">▤</span>Stack</button>
+<button class="palette-item" data-add="button" draggable="true" title="Button"><span class="palette-icon">●</span>Button</button>
+</div>
+<div class="xray-import-library-title"><span>Saved Imports</span><span id="xrayImportLibraryCount">0</span></div>
+<div aria-label="Saved imported blocks for X-Ray placement" class="xray-import-library-strip" id="xrayImportLibraryStrip">
+<div class="xray-import-library-empty">Save imported blocks first, then drag them here into sections, cells, or stacks.</div>
+</div>
+</div>
+<div class="xray-panel" id="xrayPanel"></div>
+</div>
+<button class="btn danger" id="deleteBtn" style="display:none;" type="button">Delete Selected</button>
+</aside>
+<div aria-label="Resize left panel" aria-orientation="vertical" id="leftResizeHandle" role="separator" tabindex="0" title="Drag to resize the left panel"></div>
+<main id="canvasWrap">
+<div id="canvas"></div>
+</main>
+<div aria-label="Resize right panel" aria-orientation="vertical" id="rightResizeHandle" role="separator" tabindex="0" title="Drag to resize the right properties panel"></div>
+<aside id="right">
+<h2>Selected Item</h2>
+<div class="inspector-tabs" id="inspectorTabs">
+<button class="inspector-tab-btn is-active" data-inspector-tab="content" type="button">Edit Content</button>
+<button class="inspector-tab-btn" data-inspector-tab="layout" type="button">Position &amp; Size</button>
+</div>
+<div id="rightPanelWrap">
+<div class="muted" id="rightPanel">Select something on the canvas to edit its content, layout, or settings.</div>
+</div>
+</aside>
+<div aria-hidden="true" class="ds-modal" id="designSystemModal" onclick="if(event.target===this) closeDesignSystemModal()">
+<div aria-label="Edit Design System" aria-modal="true" class="ds-dialog" role="dialog">
+<div class="ds-nav">
+<div class="ds-title"><h3 style="margin:0;">Design System</h3></div>
+<div class="hint">Choose a component family, then edit System, Brand, or Custom Override values.</div>
+<button class="ds-type-btn" data-ds-type="card" type="button">Info Card</button>
+<button class="ds-type-btn" data-ds-type="hero" type="button">Hero</button>
+<button class="ds-type-btn" data-ds-type="image" type="button">Image</button>
+<button class="ds-type-btn" data-ds-type="text" type="button">Text Box</button>
+<button class="ds-type-btn" data-ds-type="menu" type="button">Menu</button>
+<button class="ds-type-btn" data-ds-type="form" type="button">Form</button>
+<button class="ds-type-btn" data-ds-type="container" type="button">Container / Stack</button>
+<button class="ds-type-btn" data-ds-type="button" type="button">Button</button>
+</div>
+<div class="ds-editor">
+<div class="ds-title">
+<div>
+<h3 id="dsEditorTitle" style="margin:0 0 4px;">Edit Tokens</h3>
+<div class="xsmall muted" id="dsEditorHint">Choose a family, then edit the active style mode.</div>
+</div>
+<button class="btn ds-close-btn" id="dsCloseTop" onclick="closeDesignSystemModal()" style="width:auto; color:#000000; border-color:rgba(0,0,0,.25);" type="button">Close</button>
+</div>
+<div class="group">
+<label>Editing mode</label>
+<div aria-label="Design System editing mode" class="subpanel-tabs" id="dsModeTabs" role="tablist">
+<button class="subpanel-tab-btn" data-ds-token-set="default" type="button">Use System</button>
+<button class="subpanel-tab-btn" data-ds-token-set="brand" type="button">Use Brand</button>
+<button class="subpanel-tab-btn" data-ds-token-set="custom" type="button">Custom Override</button>
+</div>
+</div>
+<div id="dsEditorBody"></div>
+</div>
+<div class="ds-preview">
+<div class="ds-title">
+<div>
+<h3 style="margin:0 0 4px;">Live Preview</h3>
+<div class="xsmall muted">See changes without losing focus on the canvas.</div>
+</div>
+</div>
+<div class="ds-preview-stack" id="dsPreviewBody"></div>
+</div>
+</div>
+</div>
+<div aria-hidden="true" class="project-library-modal" id="projectLibraryModal" onclick="if(event.target===this) closeProjectLibraryModal()">
+<div aria-label="Load saved project version" aria-modal="true" class="project-library-dialog" role="dialog">
+<div class="project-library-header">
+<div>
+<div class="project-library-title">Project Versions</div>
+<div class="project-library-subtitle">Save, open, rename, duplicate, delete, or download editable JSON backups without leaving the editor.</div>
+</div>
+<button aria-label="Close project library" class="project-library-close" id="projectLibraryCloseBtn" type="button">×</button>
+</div>
+<div class="project-library-body" id="projectLibraryList">
+<div class="project-library-empty">No saved project versions yet. Use <strong>Save Version</strong> to store the current editable canvas in this browser. JSON backup/import remains available as a safety option.</div>
+</div>
+<div class="project-library-footer">
+<button class="btn primary" id="projectLibrarySaveCurrentBtn" type="button">Save New Version</button>
+<button class="btn" id="projectLibraryImportFileBtn" style="display:none !important;" type="button">Import JSON Backup</button>
+<button class="btn" id="projectLibraryCloseBottomBtn" type="button">Close</button>
+</div>
+</div>
+</div>
+<div aria-label="Export readiness checklist" aria-live="polite" class="export-check-panel" id="exportCheckPanel">
+<div class="export-check-header">
+<div class="export-check-title">Export Readiness Check</div>
+<button aria-label="Close export readiness panel" class="export-check-close" id="exportCheckCloseBtn" type="button">×</button>
+</div>
+<div class="export-check-body" id="exportCheckBody">
+<div class="export-check-summary">Run the check before export to confirm the canvas model, DOM, grid wrappers, slot children, save support, and export function are aligned.</div>
+</div>
+<div class="export-check-actions">
+<button class="btn" id="exportCheckRefreshBtn" type="button">Recheck</button>
+<button class="btn primary" id="exportCheckDownloadBtn" type="button">Export HTML</button>
+</div>
+</div>
+<script src="app.js"></script>
+
+
+
+
+
+
+
+
+<!-- Component Contract Core: hidden data/model layer only. No visible UI is created by this block. -->
+
+<!-- Component Contract Diagnostics: hidden developer-only helper. No visible UI is created. -->
+
+
+
+</body>
+</html>
