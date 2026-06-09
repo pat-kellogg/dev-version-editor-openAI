@@ -1,1598 +1,589 @@
-<!DOCTYPE html>
 <html lang="en">
+<!--
+SPECTRUM BASELINE FREEZE
+Version: spectrum-baseline-picker-stable
+Date: 2026-05-29
+Status: Stable checkpoint after Picker integration.
+
+Working Spectrum components at this checkpoint:
+- Spectrum Button
+- Spectrum Progress Circle
+- Spectrum Accordion
+- Spectrum Tabs
+- Spectrum Dialog
+- Spectrum Toast / Notification
+- Spectrum Picker / Dropdown
+
+Do not add new Spectrum components until the add-component pattern is followed:
+1. Register source schema.
+2. Register token bindings.
+3. Register preset metadata.
+4. Register editor plugin.
+5. Add palette trigger.
+6. Confirm canvas interaction.
+7. Confirm export parity.
+8. Confirm audit: schema id, bindings, preset.
+-->
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Structured Export Inspection</title>
-  <style>
-
-    :root {
-      --bg: #f3f6fb;
-      --surface: #ffffff;
-      --surface-soft: #f8fbff;
-      --text: #172033;
-      --muted: #64748b;
-      --line: #dbe4f0;
-      --brand: #2557d6;
-      --brand-dark: #1d46af;
-      --brand-soft: #eef3ff;
-      --purple: #6d5dfc;
-      --cyan: #15a3c7;
-      --good: #0f8a5f;
-      --warn: #b66a00;
-      --bad: #b42318;
-      --shadow: 0 16px 42px rgba(17, 33, 63, 0.1);
-      --radius-lg: 22px;
-      --radius-md: 16px;
-      --space-1: 6px;
-      --space-2: 10px;
-      --space-3: 16px;
-      --space-4: 24px;
-      --space-5: 34px;
-      --font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      font-family: var(--font);
-      background:
-        radial-gradient(circle at top left, rgba(37, 87, 214, 0.12), transparent 34rem),
-        linear-gradient(180deg, #ffffff 0%, var(--bg) 44%);
-      color: var(--text);
-    }
-
-    button, input, select { font: inherit; }
-
-    .walkthrough-shell {
-      min-height: 100vh;
-      display: grid;
-      grid-template-columns: 340px minmax(0, 1fr);
-    }
-
-    .tour-panel {
-      position: sticky;
-      top: 0;
-      height: 100vh;
-      overflow: auto;
-      padding: 22px;
-      border-right: 1px solid var(--line);
-      background: rgba(255,255,255,.88);
-      backdrop-filter: blur(16px);
-      z-index: 40;
-    }
-
-    .tour-panel h1 {
-      margin: 0 0 8px;
-      font-size: 23px;
-      letter-spacing: -0.045em;
-      line-height: 1.05;
-    }
-
-    .tour-panel p {
-      margin: 0 0 18px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.48;
-    }
-
-    .tour-steps {
-      display: grid;
-      gap: 8px;
-      margin: 16px 0 20px;
-    }
-
-    .tour-step {
-      display: grid;
-      grid-template-columns: 30px minmax(0,1fr);
-      gap: 10px;
-      width: 100%;
-      text-align: left;
-      border: 1px solid var(--line);
-      background: var(--surface);
-      color: var(--text);
-      border-radius: 15px;
-      padding: 11px;
-      cursor: pointer;
-      transition: .18s ease;
-    }
-
-    .tour-step:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 22px rgba(17,33,63,.08);
-    }
-
-    .tour-step[aria-pressed="false"] {
-      border-color: rgba(37,87,214,.48);
-      background: var(--brand-soft);
-      box-shadow: 0 10px 26px rgba(37,87,214,.12);
-    }
-
-    .step-num {
-      width: 30px;
-      height: 30px;
-      border-radius: 10px;
-      display: grid;
-      place-items: center;
-      background: #edf2f8;
-      color: var(--brand-dark);
-      font-weight: 900;
-      font-size: 12px;
-    }
-
-    .tour-step[aria-pressed="false"] .step-num {
-      background: var(--brand);
-      color: white;
-    }
-
-    .step-copy strong {
-      display: block;
-      font-size: 13px;
-      margin-bottom: 3px;
-    }
-
-    .step-copy span {
-      display: block;
-      color: var(--muted);
-      font-size: 11.5px;
-      line-height: 1.32;
-    }
-
-    .panel-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 14px;
-    }
-
-    .btn {
-      border: 1px solid var(--line);
-      background: var(--surface);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 10px 13px;
-      cursor: pointer;
-      font-weight: 800;
-      font-size: 13px;
-      white-space: nowrap;
-    }
-
-    .btn.primary {
-      border-color: var(--brand);
-      background: var(--brand);
-      color: white;
-      box-shadow: 0 10px 20px rgba(37,87,214,.18);
-    }
-
-    .btn.dark {
-      border-color: #172033;
-      background: #172033;
-      color: white;
-    }
-
-    .demo-area {
-      min-width: 0;
-      padding: 24px;
-    }
-
-    .app-shell {
-      min-height: calc(100vh - 48px);
-      display: grid;
-      grid-template-rows: auto 1fr;
-      border: 1px solid var(--line);
-      border-radius: 26px;
-      overflow: hidden;
-      background: white;
-      box-shadow: var(--shadow);
-      position: relative;
-      transition: max-width .25s ease;
-      margin: 0 auto;
-      max-width: 1220px;
-    }
-
-    .app-shell.mobile-preview {
-      max-width: 460px;
-    }
-
-    .topbar {
-      min-height: 72px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-3);
-      padding: 16px 24px;
-      background: rgba(255, 255, 255, 0.92);
-      border-bottom: 1px solid var(--line);
-      position: relative;
-      z-index: 2;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-width: 0;
-    }
-
-    .brand-mark {
-      width: 40px;
-      height: 40px;
-      border-radius: 13px;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(135deg, var(--brand), #7aa2ff);
-      color: #fff;
-      font-weight: 900;
-      letter-spacing: -0.04em;
-      box-shadow: 0 10px 24px rgba(37,87,214,.25);
-    }
-
-    .brand h1 {
-      margin: 0;
-      font-size: 18px;
-      line-height: 1.1;
-      letter-spacing: -0.04em;
-    }
-
-    .brand span {
-      color: var(--muted);
-      display: block;
-      font-size: 12px;
-      margin-top: 3px;
-    }
-
-    .topbar-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .search input {
-      width: min(280px, 36vw);
-      border: 1px solid var(--line);
-      background: var(--surface);
-      color: var(--text);
-      border-radius: 999px;
-      padding: 10px 14px;
-      outline: none;
-    }
-
-    .main-layout {
-      display: grid;
-      grid-template-columns: 252px minmax(0, 1fr);
-      min-height: 720px;
-      position: relative;
-    }
-
-    .sidebar {
-      background: rgba(255,255,255,.75);
-      border-right: 1px solid var(--line);
-      padding: 20px 16px;
-      position: relative;
-    }
-
-    .nav-title {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 900;
-      letter-spacing: .08em;
-      margin: 8px 10px 10px;
-      text-transform: uppercase;
-    }
-
-    .nav {
-      display: grid;
-      gap: 7px;
-      margin-bottom: 24px;
-    }
-
-    .nav a {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      text-decoration: none;
-      color: var(--text);
-      padding: 11px 12px;
-      border-radius: 13px;
-      font-weight: 800;
-      font-size: 14px;
-    }
-
-    .nav a.active {
-      background: var(--brand-soft);
-      color: var(--brand-dark);
-    }
-
-    .nav small {
-      color: var(--muted);
-      font-weight: 900;
-      font-size: 11px;
-    }
-
-    .status-card {
-      border: 1px solid var(--line);
-      background: var(--surface);
-      border-radius: var(--radius-md);
-      padding: 14px;
-      box-shadow: 0 8px 22px rgba(17,33,63,.05);
-    }
-
-    .status-card strong {
-      display: block;
-      font-size: 13px;
-      margin-bottom: 8px;
-    }
-
-    .status-card p {
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-      margin: 0;
-    }
-
-    .workspace {
-      padding: var(--space-4);
-      min-width: 0;
-      position: relative;
-    }
-
-    .page-head {
-      display: grid;
-      grid-template-columns: minmax(0,1fr) auto;
-      gap: var(--space-3);
-      align-items: end;
-      margin-bottom: var(--space-4);
-      position: relative;
-    }
-
-    .page-head h2 {
-      margin: 0;
-      font-size: clamp(26px, 4vw, 42px);
-      letter-spacing: -0.06em;
-      line-height: .98;
-    }
-
-    .page-head p {
-      color: var(--muted);
-      line-height: 1.5;
-      margin: 10px 0 0;
-      max-width: 72ch;
-    }
-
-    .filter-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .select {
-      border: 1px solid var(--line);
-      background: var(--surface);
-      border-radius: 12px;
-      padding: 10px 12px;
-      color: var(--text);
-      font-weight: 700;
-    }
-
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: var(--space-3);
-      margin-bottom: var(--space-4);
-      position: relative;
-    }
-
-    .metric-card, .panel-card {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-lg);
-      box-shadow: 0 9px 26px rgba(17,33,63,.055);
-      position: relative;
-    }
-
-    .metric-card { padding: var(--space-3); }
-
-    .metric-card small {
-      color: var(--muted);
-      font-weight: 900;
-      font-size: 12px;
-    }
-
-    .metric-card strong {
-      display: block;
-      font-size: 31px;
-      letter-spacing: -0.06em;
-      margin-top: 8px;
-    }
-
-    .metric-card span {
-      display: inline-block;
-      margin-top: 9px;
-      font-size: 12px;
-      font-weight: 900;
-      color: var(--good);
-    }
-
-    .metric-card span.warn { color: var(--warn); }
-    .metric-card span.bad { color: var(--bad); }
-
-    .content-grid {
-      display: grid;
-      grid-template-columns: minmax(0,1.35fr) minmax(300px,.65fr);
-      gap: var(--space-3);
-      align-items: start;
-      position: relative;
-    }
-
-    .panel-card { padding: var(--space-3); }
-
-    .panel-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 14px;
-      position: relative;
-    }
-
-    .panel-head h3 {
-      margin: 0;
-      font-size: 17px;
-      letter-spacing: -0.035em;
-    }
-
-    .panel-head a {
-      color: var(--brand-dark);
-      text-decoration: none;
-      font-size: 12px;
-      font-weight: 900;
-    }
-
-    .workflow-list, .activity-list { display: grid; gap: 10px; }
-
-    .workflow-item {
-      display: grid;
-      grid-template-columns: auto minmax(0,1fr) auto;
-      gap: 12px;
-      align-items: center;
-      padding: 13px;
-      border: 1px solid #edf2f8;
-      border-radius: 16px;
-      background: var(--surface-soft);
-      position: relative;
-    }
-
-    .status-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: var(--good);
-    }
-
-    .status-dot.warn { background: var(--warn); }
-    .status-dot.bad { background: var(--bad); }
-
-    .workflow-item strong {
-      display: block;
-      font-size: 14px;
-    }
-
-    .workflow-item span {
-      color: var(--muted);
-      display: block;
-      font-size: 12px;
-      line-height: 1.35;
-      margin-top: 3px;
-    }
-
-    .chip {
-      display: inline-flex;
-      justify-content: center;
-      border-radius: 999px;
-      padding: 7px 10px;
-      background: #edf7f3;
-      color: #0b704c;
-      font-size: 11px;
-      font-weight: 900;
-      white-space: nowrap;
-    }
-
-    .chip.warn { background: #fff4df; color: #946000; }
-    .chip.bad { background: #fff0ee; color: var(--bad); }
-
-    .activity-row {
-      padding-bottom: 12px;
-      border-bottom: 1px solid #edf2f8;
-    }
-
-    .activity-row:last-child { border-bottom: 0; padding-bottom: 0; }
-
-    .activity-row strong {
-      display: block;
-      font-size: 13px;
-    }
-
-    .activity-row span {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.45;
-      margin-top: 4px;
-    }
-
-    .secondary-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0,1fr));
-      gap: var(--space-3);
-      margin-top: var(--space-3);
-      position: relative;
-    }
-
-    .mini-card {
-      border: 1px solid #edf2f8;
-      background: var(--surface-soft);
-      border-radius: 16px;
-      padding: 14px;
-      min-height: 112px;
-      position: relative;
-    }
-
-    .mini-card small {
-      color: var(--muted);
-      font-weight: 900;
-      display: block;
-      margin-bottom: 8px;
-    }
-
-    .mini-card strong {
-      font-size: 18px;
-      letter-spacing: -0.035em;
-    }
-
-    .spotlight-target {
-      z-index: 25;
-      position: relative;
-      box-shadow: 0 0 0 5px rgba(37,87,214,.36), 0 0 0 9999px rgba(8,14,30,.50);
-      border-radius: var(--radius-lg);
-    }
-
-
-    .callout {
-      position: fixed;
-      width: min(420px, calc(100vw - 36px));
-      background: #ffffff;
-      color: var(--text);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      box-shadow: 0 24px 70px rgba(0,0,0,.30);
-      padding: 18px;
-      z-index: 70;
-      display: none;
-    }
-
-    .callout.visible { display: block; }
-
-    .callout small {
-      display: block;
-      color: var(--brand-dark);
-      font-weight: 900;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      font-size: 11px;
-      margin-bottom: 7px;
-    }
-
-    .callout h3 {
-      margin: 0 0 8px;
-      font-size: 19px;
-      letter-spacing: -0.04em;
-    }
-
-    .callout p {
-      color: var(--muted);
-      line-height: 1.5;
-      margin: 0 0 14px;
-      font-size: 13px;
-    }
-
-    .callout footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .callout footer span {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .overlay-panel {
-      position: fixed;
-      right: 24px;
-      bottom: 24px;
-      width: min(560px, calc(100vw - 388px));
-      max-height: min(620px, calc(100vh - 48px));
-      overflow: auto;
-      display: none;
-      background: #101827;
-      color: #dbeafe;
-      border-radius: 20px;
-      padding: 18px;
-      border: 1px solid rgba(255,255,255,.14);
-      box-shadow: 0 20px 60px rgba(0,0,0,.26);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 12.5px;
-      line-height: 1.7;
-      white-space: pre-wrap;
-      z-index: 65;
-    }
-
-    .overlay-panel.visible { display: block; }
-
-    .show-structure [data-region] {
-      outline: 3px dashed rgba(37, 87, 214, .75);
-      outline-offset: -5px;
-    }
-
-    .show-structure [data-region]::before {
-      content: attr(data-region);
-      position: absolute;
-      left: 10px;
-      top: 10px;
-      z-index: 7;
-      padding: 5px 8px;
-      background: var(--brand);
-      color: white;
-      border-radius: 9px;
-      font-size: 10px;
-      font-weight: 900;
-      letter-spacing: .035em;
-      text-transform: uppercase;
-      box-shadow: 0 5px 16px rgba(0,0,0,.2);
-      pointer-events: none;
-    }
-
-    .show-grid .metrics-grid,
-    .show-grid .content-grid,
-    .show-grid .main-layout {
-      background-image: none;
-      background-color: transparent;
-      outline: 3px solid rgba(21,163,199,.62);
-      outline-offset: -4px;
-    }
-
-    .show-grid .metrics-grid::after {
-      content: "CSS Grid: repeat(4, minmax(0, 1fr)) + governed gap";
-      position: absolute;
-      right: 10px;
-      top: -34px;
-      background: var(--cyan);
-      color: white;
-      padding: 7px 10px;
-      border-radius: 10px;
-      font-size: 11px;
-      font-weight: 900;
-      z-index: 8;
-    }
-
-    .show-flex .topbar-actions,
-    .show-flex .filter-row,
-    .show-flex .panel-head,
-    .show-flex .brand {
-      outline: 3px solid rgba(109,93,252,.75);
-      outline-offset: 4px;
-      border-radius: 14px;
-      position: relative;
-    }
-
-    .show-flex .topbar-actions::after,
-    .show-flex .filter-row::after,
-    .show-flex .panel-head::after {
-      content: "Flexbox alignment / wrapping";
-      position: absolute;
-      right: 0;
-      bottom: calc(100% + 8px);
-      background: var(--purple);
-      color: white;
-      padding: 6px 9px;
-      border-radius: 9px;
-      font-size: 10px;
-      font-weight: 900;
-      z-index: 8;
-      white-space: nowrap;
-    }
-
-    .token-tag, .schema-tag {
-      position: absolute;
-      z-index: 8;
-      padding: 5px 8px;
-      border-radius: 999px;
-      font-size: 10px;
-      font-weight: 900;
-      box-shadow: 0 8px 20px rgba(0,0,0,.18);
-      display: none;
-      pointer-events: none;
-    }
-
-    .token-tag {
-      background: #12233d;
-      color: #dbeafe;
-      border: 1px solid rgba(255,255,255,.18);
-    }
-
-    .schema-tag {
-      background: #fff7ed;
-      color: #9a3412;
-      border: 1px solid #fed7aa;
-    }
-
-    .show-tokens .token-tag,
-    .show-schema .schema-tag {
-      display: inline-flex;
-    }
-
-    .token-1 { left: 16px; top: -12px; }
-    .token-2 { right: 16px; top: 12px; }
-    .token-3 { left: 16px; bottom: -12px; }
-    .schema-1 { right: 16px; top: -12px; }
-    .schema-2 { right: 16px; bottom: 12px; }
-
-    .screenshot-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(4, 9, 22, .74);
-      z-index: 90;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-
-    .screenshot-modal.visible { display: flex; }
-
-    .screenshot-card {
-      width: min(1180px, 96vw);
-      max-height: 92vh;
-      background: #0b1020;
-      border: 1px solid rgba(255,255,255,.16);
-      border-radius: 24px;
-      box-shadow: 0 32px 90px rgba(0,0,0,.42);
-      overflow: hidden;
-    }
-
-    .screenshot-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 14px 16px;
-      color: #eaf0ff;
-      border-bottom: 1px solid rgba(255,255,255,.12);
-    }
-
-    .screenshot-body {
-      padding: 12px;
-      overflow: auto;
-      max-height: calc(92vh - 58px);
-    }
-
-    .screenshot-body img {
-      display: block;
-      width: 100%;
-      height: auto;
-      border-radius: 16px;
-    }
-
-    .app-shell.mobile-preview .main-layout { grid-template-columns: 1fr; }
-    .app-shell.mobile-preview .sidebar {
-      border-right: 0;
-      border-bottom: 1px solid var(--line);
-    }
-    .app-shell.mobile-preview .nav {
-      grid-template-columns: repeat(2, minmax(0,1fr));
-    }
-    .app-shell.mobile-preview .page-head,
-    .app-shell.mobile-preview .content-grid,
-    .app-shell.mobile-preview .metrics-grid,
-    .app-shell.mobile-preview .secondary-grid {
-      grid-template-columns: 1fr;
-    }
-    .app-shell.mobile-preview .topbar {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-    .app-shell.mobile-preview .topbar-actions {
-      justify-content: flex-start;
-    }
-    .app-shell.mobile-preview .search input {
-      width: min(100%, 360px);
-    }
-
-    @media (max-width: 1120px) {
-      .walkthrough-shell { grid-template-columns: 1fr; }
-      .tour-panel {
-        position: relative;
-        height: auto;
-        border-right: 0;
-        border-bottom: 1px solid var(--line);
-      }
-      .tour-steps {
-        grid-template-columns: repeat(2, minmax(0,1fr));
-      }
-      .overlay-panel {
-        width: min(560px, calc(100vw - 36px));
-        right: 18px;
-      }
-    }
-
-    @media (max-width: 760px) {
-      .demo-area { padding: 14px; }
-      .tour-steps { grid-template-columns: 1fr; }
-      .main-layout { grid-template-columns: 1fr; }
-      .sidebar {
-        border-right: 0;
-        border-bottom: 1px solid var(--line);
-      }
-      .metrics-grid, .content-grid, .secondary-grid, .page-head {
-        grid-template-columns: 1fr;
-      }
-      .topbar {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .topbar-actions { justify-content: flex-start; }
-      .search input { width: min(100%, 360px); }
-      .overlay-panel { left: 14px; right: 14px; bottom: 14px; width: auto; }
-    }
-
-    .responsive-controls {
-      display: none;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255,255,255,.14);
-    }
-
-    .responsive-controls.visible {
-      display: flex;
-    }
-
-    .viewport-btn {
-      border: 1px solid rgba(255,255,255,.22);
-      background: rgba(255,255,255,.08);
-      color: #eaf0ff;
-      border-radius: 10px;
-      padding: 8px 10px;
-      cursor: pointer;
-      font-weight: 900;
-      font-size: 12px;
-    }
-
-    .viewport-btn.active {
-      background: #ffffff;
-      color: #172033;
-      border-color: #ffffff;
-    }
-
-    .app-shell.tablet-preview {
-      max-width: 820px;
-    }
-
-    .app-shell.tablet-preview .main-layout {
-      grid-template-columns: 1fr;
-    }
-
-    .app-shell.tablet-preview .sidebar {
-      border-right: 0;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .app-shell.tablet-preview .nav {
-      grid-template-columns: repeat(4, minmax(0,1fr));
-    }
-
-    .app-shell.tablet-preview .nav a {
-      justify-content: center;
-      text-align: center;
-    }
-
-    .app-shell.tablet-preview .metrics-grid {
-      grid-template-columns: repeat(2, minmax(0,1fr));
-    }
-
-    .app-shell.tablet-preview .content-grid {
-      grid-template-columns: 1fr;
-    }
-
-  
-
-    /* Clean guided-panel version */
-    .tour-panel h1 {
-      margin-bottom: 8px;
-    }
-
-    .intro-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 12px 0 18px;
-    }
-
-    .tour-steps {
-      display: grid;
-      gap: 8px;
-      margin: 16px 0 20px;
-    }
-
-    .tour-step {
-      display: block;
-      width: 100%;
-      padding: 0;
-      overflow: hidden;
-      cursor: default;
-    }
-
-    .tour-step-button {
-      display: grid;
-      grid-template-columns: 30px minmax(0,1fr);
-      gap: 10px;
-      width: 100%;
-      text-align: left;
-      border: 0;
-      background: transparent;
-      color: inherit;
-      padding: 11px;
-      cursor: pointer;
-    }
-
-    .tour-step:hover {
-      transform: none;
-    }
-
-    .tour-step-detail {
-      display: none;
-      padding: 0 13px 14px 53px;
-      color: var(--muted);
-      font-size: 12.5px;
-      line-height: 1.48;
-    }
-
-    .tour-step[aria-pressed="false"] .tour-step-detail {
-      display: block;
-    }
-
-    .tour-step-detail p {
-      margin: 0 0 10px;
-    }
-
-    .inline-detail {
-      margin: 10px 0 0;
-      padding: 11px;
-      border-radius: 12px;
-      background: #101827;
-      color: #dbeafe;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 11.5px;
-      line-height: 1.55;
-      white-space: pre-wrap;
-      overflow: auto;
-      max-height: 210px;
-    }
-
-    .inline-viewport-controls {
-      display: flex;
-      gap: 7px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
-
-    .inline-viewport-controls .viewport-btn {
-      border: 1px solid var(--line);
-      background: white;
-      color: var(--text);
-      border-radius: 10px;
-      padding: 7px 9px;
-      cursor: pointer;
-      font-size: 11.5px;
-      font-weight: 900;
-    }
-
-    .inline-viewport-controls .viewport-btn.active {
-      background: var(--brand);
-      border-color: var(--brand);
-      color: white;
-    }
-
-    .callout,
-    .overlay-panel,
-    .responsive-controls {
-      display: none !important;
-    }
-
-    .token-tag,
-    .schema-tag,
-    .show-schema .schema-tag {
-      display: none !important;
-    }
-
-    .show-tokens .token-tag {
-      display: inline-flex !important;
-      align-items: center;
-      gap: 6px;
-      background: #12233d;
-      color: #dbeafe;
-      border: 1px solid rgba(255,255,255,.24);
-      box-shadow: 0 10px 24px rgba(0,0,0,.22);
-    }
-
-    .show-tokens .token-tag::before {
-      content: "Token";
-      background: rgba(255,255,255,.16);
-      color: #ffffff;
-      border-radius: 999px;
-      padding: 2px 6px;
-      font-size: 9px;
-      letter-spacing: .05em;
-      text-transform: uppercase;
-    }
-
-    .app-shell.tablet-preview {
-      max-width: 820px;
-    }
-
-    .app-shell.tablet-preview .main-layout {
-      grid-template-columns: 1fr;
-    }
-
-    .app-shell.tablet-preview .sidebar {
-      border-right: 0;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .app-shell.tablet-preview .nav {
-      grid-template-columns: repeat(4, minmax(0,1fr));
-    }
-
-    .app-shell.tablet-preview .nav a {
-      justify-content: center;
-      text-align: center;
-    }
-
-    .app-shell.tablet-preview .metrics-grid {
-      grid-template-columns: repeat(2, minmax(0,1fr));
-    }
-
-    .app-shell.tablet-preview .content-grid {
-      grid-template-columns: 1fr;
-    }
-
-
-    .usecase-modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(4, 9, 22, .58);
-      z-index: 92;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
-
-    .usecase-modal.visible { display: flex; }
-
-    .usecase-card {
-      width: min(560px, 94vw);
-      background: #ffffff;
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      box-shadow: 0 28px 80px rgba(0,0,0,.30);
-      overflow: hidden;
-    }
-
-    .usecase-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      padding: 16px 18px;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .usecase-head strong {
-      font-size: 16px;
-      letter-spacing: -0.03em;
-    }
-
-    .usecase-body {
-      padding: 18px;
-      display: grid;
-      gap: 14px;
-    }
-
-    .usecase-item {
-      padding: 14px;
-      border: 1px solid #edf2f8;
-      background: var(--surface-soft);
-      border-radius: 16px;
-    }
-
-    .usecase-item h3 {
-      margin: 0 0 6px;
-      font-size: 15px;
-      letter-spacing: -0.025em;
-    }
-
-    .usecase-item p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-  </style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Minimal Section-First Editor</title>
+<link href="styles.css" rel="stylesheet"/>
+<script src="https://jspm.dev/@spectrum-web-components/bundle/elements.js" type="module"></script>
 </head>
 <body>
-  <div class="walkthrough-shell">
-
-    <aside class="tour-panel">
-      <h1>Structured Export Inspection</h1>
-      <p>This is not the editor itself. This walkthrough demonstrates the kind of structured, implementation-aware UI composition exported by the system. It matters because developer handoff often breaks down when layout intent, responsive behavior, component structure, and design-system rules are not clearly communicated.</p>
-
-      <div class="intro-actions">
-        <button class="btn" id="showUseCases" type="button">How this can be used</button>
-        <button class="btn" id="showScreenshot" type="button">Show actual editor screenshot</button>
-      </div>
-
-      <div class="tour-steps">
-
-        <section class="tour-step" data-mode="structure" aria-pressed="false">
-          <button class="tour-step-button" type="button">
-            <span class="step-num">1</span>
-            <span class="step-copy"><strong>Semantic structure</strong><span>Reveal application regions and hierarchy.</span></span>
-          </button>
-          <div class="tour-step-detail">
-            <p>The screen is organized into named regions: app shell, navigation, main content, metrics, workflow, and activity. This gives the prototype architectural meaning.</p>
-            <div class="inline-detail">Application Shell
-├── Header / App Shell
-├── Application Layout Grid
-│   ├── Navigation Region
-│   └── Main Content Region
-│       ├── Page Heading Region
-│       ├── Metrics Grid
-│       └── Content Grid</div>
-            
-          </div>
-        </section>
-
-        <section class="tour-step" data-mode="grid" aria-pressed="false">
-          <button class="tour-step-button" type="button">
-            <span class="step-num">2</span>
-            <span class="step-copy"><strong>CSS Grid</strong><span>Show layout tracks, regions, and governed gaps.</span></span>
-          </button>
-          <div class="tour-step-detail">
-            <p>Major layout areas use CSS Grid, making the screen easier to reason about and easier to adapt across viewports.</p>
-            <div class="inline-detail">.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-3);
-}</div>
-            
-          </div>
-        </section>
-
-        <section class="tour-step" data-mode="flex" aria-pressed="false">
-          <button class="tour-step-button" type="button">
-            <span class="step-num">3</span>
-            <span class="step-copy"><strong>Flexbox</strong><span>Show alignment and adaptive control groups.</span></span>
-          </button>
-          <div class="tour-step-detail">
-            <p>Control groups, filters, and panel headers use Flexbox for alignment, spacing, and wrapping.</p>
-            <div class="inline-detail">.topbar-actions,
-.filter-row,
-.panel-head {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}</div>
-            
-          </div>
-        </section>
-
-        <section class="tour-step" data-mode="tokens" aria-pressed="false">
-          <button class="tour-step-button" type="button">
-            <span class="step-num">4</span>
-            <span class="step-copy"><strong>Tokens</strong><span>Expose spacing, radius, color, and type values.</span></span>
-          </button>
-          <div class="tour-step-detail">
-            <p>Visual decisions are attached to named tokens instead of arbitrary one-off styling.</p>
-            <div class="inline-detail">--space-3: 16px
---space-4: 24px
---radius-lg: 22px
---brand: #2557d6
---good: #0f8a5f
---warn: #b66a00</div>
-            
-          </div>
-        </section>
-
-        <section class="tour-step" data-mode="schema" aria-pressed="false">
-          <button class="tour-step-button" type="button">
-            <span class="step-num">5</span>
-            <span class="step-copy"><strong>Schema & variants</strong><span>Show component contracts and allowed states.</span></span>
-          </button>
-          <div class="tour-step-detail">
-            <p>Components can expose a contract: allowed fields, semantic roles, and approved variants. Its about governed composition not freeform chaos.</p>
-            <div class="inline-detail">MetricCard schema
-{
-  title,
-  value,
-  trend,
-  status: positive | neutral | warning | critical
-}</div>
-            
-          </div>
-        </section>
-
-        <section class="tour-step" data-mode="responsive" aria-pressed="false">
-          <button class="tour-step-button" type="button">
-            <span class="step-num">6</span>
-            <span class="step-copy"><strong>Responsive adaptation</strong><span>Preview desktop, tablet, and mobile.</span></span>
-          </button>
-          <div class="tour-step-detail">
-            <p>The same structure adapts across viewport sizes. The goal is preserving meaning while layout rules change.</p>
-            
-            
-            <div class="inline-viewport-controls">
-              <button class="viewport-btn active" data-viewport="desktop" type="button">Desktop</button>
-              <button class="viewport-btn" data-viewport="tablet" type="button">Tablet</button>
-              <button class="viewport-btn" data-viewport="mobile" type="button">Mobile</button>
+<div class="topbar">
+<div class="topbar-title">Structured UX Editor</div>
+<div aria-label="Primary editor actions" class="topbar-actions topbar-actions-clean">
+<details class="topbar-menu toolbar-group-menu" id="fileMenu">
+<summary class="btn" role="button">File ▾</summary>
+<div aria-label="File actions" class="topbar-menu-panel toolbar-menu-panel">
+<div class="toolbar-menu-heading">Project</div>
+<button class="btn primary" id="saveProjectLibraryBtn" title="Save this editable canvas as a named project version in this browser" type="button">Save Version</button>
+<button class="btn" id="loadProjectBtnTop" onclick="document.getElementById('loadProjectBtn')?.click()" title="Open saved project versions stored in this browser" type="button">Project Versions</button>
+<button class="btn" id="loadProjectBtn" title="Open saved project versions stored in this browser" type="button">Open Version</button>
+<button class="btn" id="saveBtn" title="Save this editable project in this browser only" type="button">Save Browser Copy</button>
+<button class="btn" id="saveProjectBtn" title="Download an editable .json project backup" type="button">Download JSON Backup</button>
+<div class="toolbar-menu-heading">Output</div>
+<button class="btn primary" id="exportBtn" title="Export the finished standalone website HTML" type="button">Export HTML</button>
+<button class="btn" id="exportDeveloperHandoffBtn" title="Export composition JSON and readable developer handoff notes" type="button">Export Developer Handoff</button>
+<button class="btn" id="exportCheckBtn" title="Run a readable export readiness checklist before downloading" type="button">Export Check</button>
+<button class="btn" id="spectrumAuditExportBtn" title="Download Spectrum governance status, schema ids, presets, and token bindings" type="button">Spectrum Report</button>
+</div>
+</details>
+<details class="topbar-menu toolbar-group-menu" id="viewMenu">
+<summary class="btn" role="button">View ▾</summary>
+<div aria-label="View actions" class="topbar-menu-panel toolbar-menu-panel">
+<button class="btn" id="demoModeBtn" title="Hide editor panels and present the current canvas" type="button">Demo Mode</button>
+<button class="btn" id="semanticMapToggleBtn" title="Show semantic section and component labels on the canvas" type="button">Structure Map</button>
+<button class="btn" id="themeToggleBtn" type="button">Dark Mode</button>
+<div class="toolbar-menu-heading">Zoom</div>
+<div aria-label="Canvas zoom controls" class="zoom-controls" id="canvasZoomControls">
+<button class="btn" id="zoomOutBtn" title="Zoom out" type="button">−</button>
+<div class="zoom-readout" id="zoomReadout">100%</div>
+<button class="btn" id="zoomResetBtn" title="Reset zoom" type="button">Reset</button>
+<button class="btn" id="zoomInBtn" title="Zoom in" type="button">+</button>
+</div>
+</div>
+</details>
+<details class="topbar-menu toolbar-group-menu" id="designMenu">
+<summary class="btn" role="button">Design ▾</summary>
+<div aria-label="Design actions" class="topbar-menu-panel toolbar-menu-panel">
+<button class="btn" id="designSystemBtn" title="Edit design system tokens and component styles" type="button">Design System</button>
+<button class="btn" id="designSystemPopoutBtn" title="Open Design System in a separate browser window" type="button">Pop Out Design System</button>
+</div>
+</details>
+<details class="topbar-menu toolbar-group-menu" id="editMenu">
+<summary class="btn" role="button">Edit ▾</summary>
+<div aria-label="Edit actions" class="topbar-menu-panel toolbar-menu-panel">
+<button class="btn" disabled="" id="undoBtn" title="Undo last change" type="button">↶ Undo</button>
+<button class="btn" disabled="" id="redoBtn" title="Redo last undone change" type="button">↷ Redo</button>
+<button class="btn" id="duplicateSelectedBtnTop" title="Duplicate the selected section or component" type="button">Duplicate</button>
+<button class="btn danger" id="deleteBtnTop" title="Delete the selected section or component" type="button">Delete Selected</button>
+</div>
+</details>
+<details class="topbar-menu toolbar-group-menu" id="toolsMenu">
+<summary class="btn" role="button">Tools ▾</summary>
+<div aria-label="Test and diagnostic tools" class="topbar-menu-panel toolbar-menu-panel">
+<button class="btn" id="testPageBtn" title="Create a complete starter page for quick canvas/export testing" type="button">Create Test Page</button>
+<button class="btn" id="domCheckBtn" title="Check canvas DOM structure against editor state" type="button">DOM Check</button>
+<button class="btn" id="importHtmlBtn" style="display:none !important;" title="Legacy quick paste importer" type="button">Quick Import (legacy)</button>
+</div>
+</details>
+<div aria-label="Quick edit actions" class="topbar-split-actions">
+<button class="topbar-split-btn danger" id="quickDeleteBtn" title="Delete selected" type="button">Delete</button>
+<span aria-hidden="true" class="topbar-split-divider"></span>
+<button class="topbar-split-btn" id="quickUndoBtn" title="Undo last change" type="button">Undo</button>
+</div>
+<input accept="application/json,.json" hidden="" id="loadProjectFileInput" type="file"/>
+</div>
+</div>
+<div aria-labelledby="developerHandoffTitle" aria-modal="true" class="developer-handoff-modal" id="developerHandoffModal" role="dialog">
+<div class="developer-handoff-dialog is-draggable" id="developerHandoffDialog">
+<div class="developer-handoff-header" id="developerHandoffDragHandle">
+<div>
+<div class="developer-handoff-title" id="developerHandoffTitle">Developer Handoff Preview</div>
+<div class="developer-handoff-subtitle">Review the live visual preview, implementation structure, content inventory, tokens, risks, AI prompt, and export files before downloading the handoff package.</div>
+</div>
+<button class="btn" id="developerHandoffCloseBtn" type="button">Close</button>
+</div>
+<div aria-label="Developer handoff preview tabs" class="developer-handoff-tabs" role="tablist">
+<button class="developer-handoff-tab active" data-handoff-tab="summary" type="button">Summary</button>
+<button class="developer-handoff-tab" data-handoff-tab="preview" type="button">Live Preview</button>
+<button class="developer-handoff-tab" data-handoff-tab="content" type="button">Content Inventory</button>
+<button class="developer-handoff-tab" data-handoff-tab="risks" type="button">Issues / Risks</button>
+<button class="developer-handoff-tab" data-handoff-tab="architecture" type="button">Architecture Map</button>
+<button class="developer-handoff-tab" data-handoff-tab="frameworks" type="button">Framework Mapping</button>
+<button class="developer-handoff-tab" data-handoff-tab="contracts" type="button">Component Contracts</button>
+<button class="developer-handoff-tab" data-handoff-tab="responsive" type="button">Responsive Simulator</button>
+<button class="developer-handoff-tab" data-handoff-tab="tokens" type="button">Token Inspector</button>
+<button class="developer-handoff-tab" data-handoff-tab="accessibility" type="button">Accessibility Summary</button>
+<button class="developer-handoff-tab" data-handoff-tab="notes" type="button">Developer Notes</button>
+<button class="developer-handoff-tab" data-handoff-tab="ai" type="button">AI Prompt</button>
+<button class="developer-handoff-tab" data-handoff-tab="readiness" type="button">Readiness Score</button>
+<button class="developer-handoff-tab" data-handoff-tab="json" type="button">Composition JSON</button>
+<button class="developer-handoff-tab" data-handoff-tab="markdown" type="button">Markdown Notes</button>
+<button class="developer-handoff-tab" data-handoff-tab="files" type="button">Export Files</button>
+</div>
+<div class="developer-handoff-body">
+<section class="developer-handoff-panel active" data-handoff-panel="summary" id="developerHandoffSummaryPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="preview" id="developerHandoffPreviewPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="content" id="developerHandoffContentPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="risks" id="developerHandoffRisksPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="architecture" id="developerHandoffArchitecturePanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="frameworks" id="developerHandoffFrameworkPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="contracts" id="developerHandoffContractsPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="responsive" id="developerHandoffResponsivePanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="tokens" id="developerHandoffTokenPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="accessibility" id="developerHandoffAccessibilityPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="notes" id="developerHandoffNotesPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="ai" id="developerHandoffAiPromptPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="readiness" id="developerHandoffReadinessPanel"></section>
+<section class="developer-handoff-panel" data-handoff-panel="json">
+<textarea class="developer-handoff-code" id="developerHandoffJsonText" spellcheck="false"></textarea>
+</section>
+<section class="developer-handoff-panel" data-handoff-panel="markdown">
+<textarea class="developer-handoff-code" id="developerHandoffMarkdownText" spellcheck="false"></textarea>
+</section>
+<section class="developer-handoff-panel" data-handoff-panel="files" id="developerHandoffFilesPanel"></section>
+</div>
+<div class="developer-handoff-footer">
+<div class="developer-handoff-note">This preview is meant to make the handoff readable before export. The HTML remains the visual reference; JSON and Markdown carry the developer intent.</div>
+<div class="developer-handoff-actions">
+<button class="btn" id="developerHandoffPopoutBtn" type="button">Pop Out</button>
+<button class="btn" id="developerHandoffDownloadPreviewBtn" type="button">Download Preview HTML</button>
+<button class="btn" id="developerHandoffDownloadJsonBtn" type="button">Download JSON</button>
+<button class="btn" id="developerHandoffDownloadMarkdownBtn" type="button">Download Markdown</button>
+<button class="btn" id="developerHandoffDownloadAiPromptFooterBtn" type="button">Download AI Prompt</button>
+<button class="btn primary" id="developerHandoffDownloadAllBtn" type="button">Download Package</button>
+</div>
+</div>
+</div>
+</div>
+<aside id="left">
+<div class="panel-tabs" id="leftTabs">
+<button class="panel-tab-btn active" data-left-tab="add" title="Add sections, components, and imports" type="button">Components</button>
+<button class="panel-tab-btn" data-left-tab="canvas" title="Adjust canvas and section layout" type="button">Layout</button>
+<button class="panel-tab-btn" data-left-tab="xray" title="View and manage page structure" type="button">Outline</button>
+</div>
+<div class="panel-tab-panel" data-left-panel="add">
+<h2>Components</h2>
+<div class="hint">Drag a component into the section on the canvas.</div>
+<div class="group"><button aria-controls="componentsPanel" aria-expanded="false" class="btn template-toggle-btn" id="componentsToggle" type="button"><span><span class="palette-icon">▦</span>Components</span><span class="template-chevron">▼</span></button>
+<div class="template-list-panel hidden" id="componentsPanel">
+<div class="hint">Drag components into sections or onto the canvas.</div>
+<button class="palette-item" data-add="section" draggable="true"><span class="palette-icon">▦</span>Blank Section</button>
+<button class="palette-item" data-add="card" draggable="true"><span class="palette-icon">🪪</span>Info Card</button>
+<button class="palette-item" data-add="hero" draggable="true"><span class="palette-icon">▣</span>Hero</button>
+<button class="palette-item" data-add="text" draggable="true"><span class="palette-icon">T</span>Text Box</button>
+<button class="palette-item" data-add="menu" draggable="true"><span class="palette-icon">☰</span>Menu</button>
+<button class="palette-item" data-add="form" draggable="true"><span class="palette-icon">✎</span>Form</button>
+<button class="palette-item" data-add="image" draggable="true"><span class="palette-icon">🖼</span>Image</button>
+<button class="palette-item" data-add="container" draggable="true"><span class="palette-icon">▤</span>Container / Stack</button>
+<button class="palette-item" data-add="button" draggable="true"><span class="palette-icon">●</span>Button</button>
+<div class="components-import-library-list" id="componentsImportLibraryList"></div>
+</div>
+<div class="group" id="leftPluginGroup">
+<button aria-expanded="true" class="btn template-toggle-btn" id="pluginsToggleBtn" type="button">
+<span><span class="palette-icon">◧</span> Adobe Spectrum</span>
+<span class="template-chevron">⌄</span>
+</button>
+<div class="template-list-panel" id="leftPluginsPanel">
+<button class="palette-item" id="leftSpectrumButtonPlugin" type="button">
+<span class="palette-icon">◧</span>
+              Button
+            </button>
+<button class="palette-item" id="leftSpectrumTextFieldPlugin" type="button">
+<span class="palette-icon">⌨</span>
+              Text Field
+            </button>
+<button class="palette-item" id="leftSpectrumCheckboxPlugin" type="button">
+<span class="palette-icon">☑</span>
+              Checkbox
+            </button>
+<button class="palette-item" id="leftSpectrumSwitchPlugin" type="button">
+<span class="palette-icon">⏽</span>
+              Switch
+            </button>
+<button class="palette-item" id="leftSpectrumSliderPlugin" type="button">
+<span class="palette-icon">↔</span>
+              Slider
+            </button>
+<button class="palette-item" id="leftSpectrumProgressCirclePlugin" type="button">
+<span class="palette-icon">◌</span>
+              Progress Circle
+            </button>
+<button class="palette-item" id="leftSpectrumAccordionPlugin" type="button">
+<span class="palette-icon">▾</span>
+              Accordion
+            </button>
+<button class="palette-item" id="leftSpectrumTabsPlugin" type="button">
+<span class="palette-icon">▥</span>
+              Tabs
+            </button>
+<button class="palette-item" id="leftSpectrumDialogPlugin" type="button">
+<span class="palette-icon">▣</span>
+              Dialog
+            </button>
+<button class="palette-item" id="leftSpectrumToastPlugin" type="button">
+<span class="palette-icon">◉</span>
+              Toast / Notification
+            </button>
+<button class="palette-item" id="leftSpectrumPickerPlugin" type="button">
+<span class="palette-icon">⌄</span>
+              Picker / Dropdown
+            </button>
+<div class="hint" style="margin-top:8px;margin-bottom:0;">
+              External Web Component. Click to add to canvas; edit and delete from Properties.
             </div>
-          </div>
-        </section>
+</div>
+</div>
+</div><div class="group">
+<button aria-controls="sectionTemplatesPanel" aria-expanded="false" class="btn template-toggle-btn" id="sectionTemplatesToggle" type="button">
+<span><span class="palette-icon">▧</span>Section Starters</span>
+<span class="template-chevron">▼</span>
+</button>
+<div class="template-list-panel hidden" id="sectionTemplatesPanel">
+<div class="hint">Prebuilt section layouts. Drag one onto the canvas, or click to add it.</div>
+<button class="palette-item" data-template-drag="hero-image-right"><span class="palette-icon">▧</span>Hero — Image Right</button>
+<button class="palette-item" data-template-drag="feature-row"><span class="palette-icon">▦</span>3-Card Feature Row</button>
+<button class="palette-item" data-template-drag="image-text-split"><span class="palette-icon">◧</span>Image + Text Split</button>
+<button class="palette-item" data-template-drag="robust-image-button-row"><span class="palette-icon">▤</span>Robust Image + Button Row</button>
+<button class="palette-item" data-template-drag="robust-split-content-actions"><span class="palette-icon">◨</span>Robust Split + Actions</button>
+<button class="palette-item" data-template-drag="robust-centered-cta"><span class="palette-icon">◎</span>Robust Centered CTA</button>
+<button class="palette-item" data-template-drag="robust-card-action-row"><span class="palette-icon">▥</span>Robust Card + Action Row</button>
+<button class="palette-item" data-template-drag="cta-banner"><span class="palette-icon">⬒</span>CTA Banner</button>
+<button class="palette-item" data-template-drag="contact-layout"><span class="palette-icon">✎</span>Contact Layout</button>
+<button class="palette-item" data-template-drag="gallery-row"><span class="palette-icon">▥</span>Gallery Row</button>
+<button class="palette-item" data-template-drag="hero-overlay"><span class="palette-icon">▣</span>Hero Overlay</button>
+<button class="palette-item" data-template-drag="feature-alternating"><span class="palette-icon">↔</span>Feature Alternating</button>
+<button class="palette-item" data-template-drag="landing-starter"><span class="palette-icon">▤</span>Landing Starter</button>
+<button class="palette-item" data-template-drag="dashboard-layout"><span class="palette-icon">▨</span>Dashboard Layout</button>
+<button class="palette-item" data-template-drag="cta-split-strong"><span class="palette-icon">⬒</span>CTA Split Strong</button>
+<button class="palette-item" data-template-drag="vertical-stack"><span class="palette-icon">↕</span>Vertical Stack</button>
+<button class="palette-item" data-template-drag="horizontal-row"><span class="palette-icon">↔</span>Horizontal Row</button>
+<button class="palette-item" data-template-drag="centered-content"><span class="palette-icon">◎</span>Centered Content</button>
+<button class="palette-item" data-template-drag="button-group"><span class="palette-icon">●</span>Button Group</button>
+<button class="palette-item" data-template-drag="form-stack"><span class="palette-icon">✎</span>Form Stack</button>
+<button class="palette-item" data-template-drag="card-layout"><span class="palette-icon">▥</span>Card Layout</button>
+<button class="palette-item" data-template-drag="equal-spacing"><span class="palette-icon">⋯</span>Equal Spacing</button>
+<button class="palette-item" data-template-drag="top-alignment"><span class="palette-icon">⇡</span>Top Aligned Stack</button>
+<button class="palette-item" data-template-drag="center-alignment"><span class="palette-icon">↕</span>Center Aligned Stack</button>
+<button class="palette-item" data-template-drag="bottom-alignment"><span class="palette-icon">⇣</span>Bottom Aligned Stack</button>
+</div>
+</div>
+<div class="group saved-imports-hidden" id="importLibraryGroup"><button aria-controls="importLibraryPanel" aria-expanded="false" class="btn template-toggle-btn" id="importLibraryToggle" style="display:none !important;" type="button"><span><span class="palette-icon">▤</span>Saved Imports</span><span class="template-chevron">▼</span></button>
+<div class="template-list-panel hidden" id="importLibraryPanel">
+<div class="hint">Reusable imported blocks you saved. Drag a saved block into any section.</div>
+<div class="import-library-actions">
+<button class="btn primary" id="openImportStudioBtn" style="display:none !important;" type="button">New Import</button>
+<button class="btn" id="exportImportLibraryBtn" style="display:none !important;" type="button">Download Library Backup</button>
+<button class="btn" id="mergeImportLibraryBtn" style="display:none !important;" type="button">Merge Library Backup</button>
+<button class="btn" id="replaceImportLibraryBtn" style="display:none !important;" type="button">Replace Library From Backup</button>
+<input accept="application/json,.json" class="import-library-file-input" id="importLibraryFileInput" type="file"/>
+<div class="import-library-status" id="importLibraryTransferStatus">Use <strong>New Import</strong> for new blocks. Backup tools are for moving your saved import library between browsers.</div>
+</div>
+<div aria-label="Filter saved imported blocks" class="import-library-filter">
+<label for="importLibrarySearch">Search library</label>
+<input autocomplete="off" id="importLibrarySearch" placeholder="Search name, category, tags, notes, or HTML..." type="search"/>
+<div class="row">
+<div><label for="importLibraryCategoryFilter">Category</label><select id="importLibraryCategoryFilter"><option value="">All categories</option></select></div>
+<div><label for="importLibrarySort">Sort</label><select id="importLibrarySort"><option value="updated">Recently updated</option><option value="title">Name A-Z</option><option value="category">Category</option></select></div>
+</div>
+</div>
+<div class="import-library-list" id="importLibraryList">
+<div class="import-library-empty">No saved imported blocks yet.</div>
+</div>
+</div></div>
+<div aria-hidden="true" class="import-library-detail-modal" id="importLibraryDetailModal">
+<div aria-labelledby="importLibraryDetailTitle" aria-modal="true" class="import-library-detail-dialog" role="dialog">
+<div class="import-library-detail-main">
+<div class="import-library-detail-head">
+<div>
+<h3 class="import-library-detail-title" id="importLibraryDetailTitle">Saved Import Details</h3>
+<div class="import-library-detail-meta" id="importLibraryDetailMeta">Reusable imported HTML block</div>
+</div>
+<button class="btn import-library-detail-close" id="importLibraryDetailClose" style="display:none !important;" type="button">Close</button>
+</div>
+<label>Display name</label>
+<input id="importLibraryDetailName" type="text" value=""/>
+<div class="import-library-meta-fields">
+<div><label for="importLibraryDetailCategory">Category</label><input id="importLibraryDetailCategory" placeholder="Hero, Card, CTA, Navigation..." type="text"/></div>
+<div><label for="importLibraryDetailTags">Tags</label><input id="importLibraryDetailTags" placeholder="Comma-separated tags" type="text"/></div>
+</div>
+<label style="margin-top:12px;">Notes</label>
+<textarea id="importLibraryDetailNotes" placeholder="How this block should be used, dependencies, or design notes." style="min-height:70px;"></textarea>
+<label style="margin-top:12px;">HTML source</label>
+<textarea class="import-library-detail-source" id="importLibraryDetailSource"></textarea>
+</div>
+<div class="import-library-detail-side">
+<h4>Preview</h4>
+<span class="import-preview-shell import-library-detail-preview"><iframe class="import-preview-frame" id="importLibraryDetailPreview" sandbox="" tabindex="-1" title="Imported block detail preview"></iframe></span>
+<div class="import-preview-mode-card">
+<div class="import-preview-mode-title">Preview Mode</div>
+<div class="import-preview-mode-actions">
+<button class="btn active" id="importLibraryPreviewStatic" style="display:none !important;" type="button">Static Safe</button>
+<button class="btn" id="importLibraryPreviewInteractive" style="display:none !important;" type="button">Run in Sandbox</button>
+</div>
+<div class="import-preview-mode-status" id="importLibraryPreviewModeStatus">Scripts are off. HTML and CSS are previewed only.</div>
+</div>
+<div class="import-preview-mode-card" id="importLibraryTokenTestCard" style="margin-top:12px;">
+<div class="import-preview-mode-title">Style Imported Component</div>
+<div class="hint" style="margin-bottom:10px;">Choose a preset first. Use Fine Tune only when you need to adjust one visual part. Then use <strong>Save + update canvas</strong> below.</div>
+<div class="import-preview-mode-status" id="importTokenBridgeLiveStatus" style="display:block;margin:10px 0 12px;padding:10px 12px;border:1px solid var(--brand);border-radius:12px;background:var(--brand-soft);color:var(--text);font-weight:800;line-height:1.35;">Step 1: Choose a Theme Preset, then click Preview preset.</div>
+<div class="import-preview-mode-card" style="margin:10px 0;padding:10px;background:color-mix(in srgb, var(--panel) 84%, var(--soft) 16%);">
+<div class="import-preview-mode-title">1. Theme Preset</div>
+<label for="importLibraryTokenPreset">Preset</label>
+<select id="importLibraryTokenPreset">
+<option value="brand">Brand system</option>
+<option value="success">Success system</option>
+<option value="warning">Warning system</option>
+<option value="danger">Danger system</option>
+<option value="info">Info system</option>
+</select>
+<button class="btn primary" id="importLibraryApplyTokenPreset" style="margin-top:10px;" type="button">Preview preset</button>
+<div class="import-preview-mode-status" id="importLibraryTokenPresetStatus" style="margin-top:8px;">Best first step. Presets try accent, surface, text, and border together.</div>
+</div>
+<details class="import-preview-mode-card" style="margin:10px 0;padding:10px;background:color-mix(in srgb, var(--panel) 90%, var(--soft) 10%);">
+<summary class="import-preview-mode-title" style="cursor:pointer;">Fine Tune one token</summary>
+<div class="hint" style="margin:8px 0;">Use this when one part of the component needs a different token.</div>
+<label for="importLibraryTokenAttr">Target to style</label>
+<select id="importLibraryTokenAttr">
+<option value="accent">Accent / primary visual hook</option>
+<option value="background">Background</option>
+<option value="surface">Surface / card fill</option>
+<option value="text">Text / foreground</option>
+<option value="border">Border / outline</option>
+<option value="color">General color</option>
+</select>
+<label for="importLibraryTokenValue" style="margin-top:8px;">Token value</label>
+<select id="importLibraryTokenValue">
+<option value="#4f46e5">Brand</option>
+<option value="#16a34a">Success</option>
+<option value="#f59e0b">Warning</option>
+<option value="#dc2626">Danger</option>
+<option value="#0ea5e9">Info</option>
+<option value="#1f2937">Text</option>
+<option value="#ffffff">Surface</option>
+<option value="#dbe4ee">Border</option>
+</select>
+<button class="btn" id="importLibraryApplyTokenToSource" style="margin-top:10px;" type="button">Preview single token</button>
+<div class="import-preview-mode-status" id="importLibraryTokenStatus" style="margin-top:8px;">Single-token changes update the source and preview. Save when it looks right.</div>
+</details>
+<div class="import-preview-mode-card" style="margin:10px 0;padding:10px;background:color-mix(in srgb, var(--brand-soft) 38%, var(--panel) 62%);">
+<div class="import-preview-mode-title">2. Save</div>
+<div class="import-preview-mode-status">When the preview looks right, click <strong>Save + update canvas</strong> in the buttons below. That carries the styled component to canvas and export.</div>
+<div class="import-preview-mode-status" id="importLibraryTokenWorkflowStatus" style="margin-top:8px;font-weight:800;color:var(--brand);">No token preview applied yet.</div>
+</div>
+<details class="import-preview-mode-card" id="importLibraryTokenCompatibilityCard" style="margin:10px 0;padding:10px;background:color-mix(in srgb, var(--panel) 82%, var(--soft) 18%);">
+<summary class="import-preview-mode-title" style="cursor:pointer;">Advanced compatibility details</summary>
+<div class="hint" style="margin:8px 0;">Use this only when a preset does not visually affect the part of the component you expected.</div>
+<div class="import-preview-mode-status" id="importLibraryTokenCompatibilityList">Open an imported block and click Refresh checklist.</div>
+<div class="import-preview-mode-status" id="importLibraryTokenSuggestedMapping" style="margin-top:8px;">Suggested mapping will appear here.</div>
+<button class="btn" id="importLibraryRefreshCompatibility" style="margin-top:10px;" type="button">Refresh checklist</button>
+</details>
+</div>
+<div class="import-library-detail-stat"><strong>Type</strong><span>Imported HTML Block</span></div>
+<div id="importLibraryDetailReadiness"></div>
+<div class="import-library-detail-stat"><strong>Usage</strong><span id="importLibraryDetailUsage">0 placed instance(s)</span></div>
+<div class="import-library-detail-stat"><strong>Updated</strong><span id="importLibraryDetailUpdated">—</span></div>
+<div class="token-next-step-callout" id="importTokenBridgeNextStepCallout">Next: choose a preset above, then preview it.</div>
+<div class="import-library-detail-actions">
+<button class="btn primary" id="importLibraryDetailSave" style="display:none !important;" type="button">Save + update canvas</button>
+<button class="btn" id="importLibraryDetailAdd" style="display:none !important;" type="button">Add to selected target</button>
+<button class="btn" id="importLibraryDetailSync" style="display:none !important;" type="button">Apply saved source to linked canvas blocks</button>
+<button class="btn" id="importLibraryDetailDuplicate" style="display:none !important;" type="button">Duplicate block</button>
+<button class="btn danger" id="importLibraryDetailDelete" style="display:none !important;" type="button">Delete from library</button>
+</div>
+<div class="hint" style="margin-top:10px;">Token changes first update the source/preview. Use <strong>Save + update canvas</strong> to make the edited library block carry through to canvas and export.</div>
+</div>
+</div>
+</div>
+<div aria-hidden="true" class="import-source-editor-modal" id="importSourceEditorModal">
+<div aria-labelledby="importSourceEditorTitle" aria-modal="true" class="import-source-editor-dialog" role="dialog">
+<div class="import-source-editor-main">
+<div class="import-source-editor-head">
+<div>
+<h3 class="import-source-editor-title" id="importSourceEditorTitle">Placed Import Source</h3>
+<div class="import-source-editor-meta" id="importSourceEditorMeta">Edit the selected placed imported block directly.</div>
+</div>
+<button class="btn import-source-editor-close" id="importSourceEditorClose" style="display:none !important;" type="button">Close</button>
+</div>
+<label>Display name</label>
+<input id="importSourceEditorName" type="text" value=""/>
+<label style="margin-top:12px;">HTML source</label>
+<textarea class="import-source-editor-source" id="importSourceEditorSource"></textarea>
+</div>
+<div class="import-source-editor-side">
+<h4>Live Preview</h4>
+<span class="import-preview-shell import-source-editor-preview"><iframe class="import-preview-frame" id="importSourceEditorPreview" sandbox="" tabindex="-1" title="Selected imported block source preview"></iframe></span>
+<div class="import-preview-mode-card">
+<div class="import-preview-mode-title">Preview Mode</div>
+<div class="import-preview-mode-actions">
+<button class="btn active" id="importSourcePreviewStatic" style="display:none !important;" type="button">Static Safe</button>
+<button class="btn" id="importSourcePreviewInteractive" style="display:none !important;" type="button">Run in Sandbox</button>
+</div>
+<div class="import-preview-mode-status" id="importSourcePreviewModeStatus">Scripts are off. HTML and CSS are previewed only.</div>
+</div>
+<div class="import-source-editor-stat"><strong>Instance</strong><span id="importSourceEditorInstanceStatus">Selected imported block</span></div>
+<div class="import-source-editor-stat"><strong>Library link</strong><span id="importSourceEditorLinkStatus">—</span></div>
+<div id="importSourceEditorReadiness"></div>
+<div class="import-source-editor-actions">
+<button class="btn primary" id="importSourceEditorApply" style="display:none !important;" type="button">Apply to This Instance</button>
+<button class="btn primary" id="importSourceEditorApplyLinked" style="display:none !important;" type="button">Apply + Update Linked Library</button>
+<button class="btn" id="importSourceEditorSaveCopy" style="display:none !important;" type="button">Save Copy to Saved Imports</button>
+<button class="btn" id="importSourceEditorRefreshPreview" style="display:none !important;" type="button">Refresh Preview</button>
+</div>
+<div class="hint" style="margin-top:10px;">Use this larger editor when the right-panel source field is too small. Wrapper styles stay on the placed instance.</div>
+</div>
+</div>
+</div>
+</div>
+<div class="panel-tab-panel hidden" data-left-panel="canvas">
+<h2>Layout</h2>
+<div class="hint">Control canvas size, section grids, rows, columns, and responsive behavior.</div>
+<div class="group">
+<h4>Resolution</h4>
+<div class="resolution-grid" id="resolutionControls"></div>
+<div class="xsmall muted" id="resolutionStatus" style="margin-top:8px;">Canvas width: responsive</div>
+</div>
+<div class="group" id="leftPanel"></div>
+</div>
+<div class="panel-tab-panel hidden" data-left-panel="xray">
+<h2>Outline</h2>
+<div class="hint">Select, inspect, delete, and lightly reorder the page structure.</div>
+<div class="group">
+<h4>Quick Add</h4>
+<div class="hint">Fast placement shortcuts for the selected page structure below.</div>
+<div class="xray-toolbar">
+<button class="btn" id="xrayExpandAllBtn" onclick="expandAllXray()" type="button">Expand all</button>
+<button class="btn" id="xrayCollapseAllBtn" onclick="collapseAllXray()" type="button">Collapse all</button>
+<button class="btn" id="xrayShowCellsBtn" onclick="toggleXrayCells()" type="button">Show cells</button>
+</div>
+<div aria-label="Quick draggable components" class="xray-component-strip">
+<button class="palette-item" data-add="section" draggable="true" title="Blank Section"><span class="palette-icon">▦</span>Section</button>
+<button class="palette-item" data-add="card" draggable="true" title="Info Card"><span class="palette-icon">🪪</span>Card</button>
+<button class="palette-item" data-add="hero" draggable="true" title="Hero"><span class="palette-icon">▣</span>Hero</button>
+<button class="palette-item" data-add="text" draggable="true" title="Text Box"><span class="palette-icon">T</span>Text</button>
+<button class="palette-item" data-add="menu" draggable="true" title="Menu"><span class="palette-icon">☰</span>Menu</button>
+<button class="palette-item" data-add="form" draggable="true" title="Form"><span class="palette-icon">✎</span>Form</button>
+<button class="palette-item" data-add="image" draggable="true" title="Image"><span class="palette-icon">🖼</span>Image</button>
+<button class="palette-item" data-add="container" draggable="true" title="Container / Stack"><span class="palette-icon">▤</span>Stack</button>
+<button class="palette-item" data-add="button" draggable="true" title="Button"><span class="palette-icon">●</span>Button</button>
+</div>
+<div class="xray-import-library-title"><span>Saved Imports</span><span id="xrayImportLibraryCount">0</span></div>
+<div aria-label="Saved imported blocks for X-Ray placement" class="xray-import-library-strip" id="xrayImportLibraryStrip">
+<div class="xray-import-library-empty">Save imported blocks first, then drag them here into sections, cells, or stacks.</div>
+</div>
+</div>
+<div class="xray-panel" id="xrayPanel"></div>
+</div>
+<button class="btn danger" id="deleteBtn" style="display:none;" type="button">Delete Selected</button>
+</aside>
+<div aria-label="Resize left panel" aria-orientation="vertical" id="leftResizeHandle" role="separator" tabindex="0" title="Drag to resize the left panel"></div>
+<main id="canvasWrap">
+<div id="canvas"></div>
+</main>
+<div aria-label="Resize right panel" aria-orientation="vertical" id="rightResizeHandle" role="separator" tabindex="0" title="Drag to resize the right properties panel"></div>
+<aside id="right">
+<h2>Selected Item</h2>
+<div class="inspector-tabs" id="inspectorTabs">
+<button class="inspector-tab-btn is-active" data-inspector-tab="content" type="button">Edit Content</button>
+<button class="inspector-tab-btn" data-inspector-tab="layout" type="button">Position &amp; Size</button>
+</div>
+<div id="rightPanelWrap">
+<div class="muted" id="rightPanel">Select something on the canvas to edit its content, layout, or settings.</div>
+</div>
+</aside>
+<div aria-hidden="true" class="ds-modal" id="designSystemModal" onclick="if(event.target===this) closeDesignSystemModal()">
+<div aria-label="Edit Design System" aria-modal="true" class="ds-dialog" role="dialog">
+<div class="ds-nav">
+<div class="ds-title"><h3 style="margin:0;">Design System</h3></div>
+<div class="hint">Choose a component family, then edit System, Brand, or Custom Override values.</div>
+<button class="ds-type-btn" data-ds-type="card" type="button">Info Card</button>
+<button class="ds-type-btn" data-ds-type="hero" type="button">Hero</button>
+<button class="ds-type-btn" data-ds-type="image" type="button">Image</button>
+<button class="ds-type-btn" data-ds-type="text" type="button">Text Box</button>
+<button class="ds-type-btn" data-ds-type="menu" type="button">Menu</button>
+<button class="ds-type-btn" data-ds-type="form" type="button">Form</button>
+<button class="ds-type-btn" data-ds-type="container" type="button">Container / Stack</button>
+<button class="ds-type-btn" data-ds-type="button" type="button">Button</button>
+</div>
+<div class="ds-editor">
+<div class="ds-title">
+<div>
+<h3 id="dsEditorTitle" style="margin:0 0 4px;">Edit Tokens</h3>
+<div class="xsmall muted" id="dsEditorHint">Choose a family, then edit the active style mode.</div>
+</div>
+<button class="btn ds-close-btn" id="dsCloseTop" onclick="closeDesignSystemModal()" style="width:auto; color:#000000; border-color:rgba(0,0,0,.25);" type="button">Close</button>
+</div>
+<div class="group">
+<label>Editing mode</label>
+<div aria-label="Design System editing mode" class="subpanel-tabs" id="dsModeTabs" role="tablist">
+<button class="subpanel-tab-btn" data-ds-token-set="default" type="button">Use System</button>
+<button class="subpanel-tab-btn" data-ds-token-set="brand" type="button">Use Brand</button>
+<button class="subpanel-tab-btn" data-ds-token-set="custom" type="button">Custom Override</button>
+</div>
+</div>
+<div id="dsEditorBody"></div>
+</div>
+<div class="ds-preview">
+<div class="ds-title">
+<div>
+<h3 style="margin:0 0 4px;">Live Preview</h3>
+<div class="xsmall muted">See changes without losing focus on the canvas.</div>
+</div>
+</div>
+<div class="ds-preview-stack" id="dsPreviewBody"></div>
+</div>
+</div>
+</div>
+<div aria-hidden="true" class="project-library-modal" id="projectLibraryModal" onclick="if(event.target===this) closeProjectLibraryModal()">
+<div aria-label="Load saved project version" aria-modal="true" class="project-library-dialog" role="dialog">
+<div class="project-library-header">
+<div>
+<div class="project-library-title">Project Versions</div>
+<div class="project-library-subtitle">Save, open, rename, duplicate, delete, or download editable JSON backups without leaving the editor.</div>
+</div>
+<button aria-label="Close project library" class="project-library-close" id="projectLibraryCloseBtn" type="button">×</button>
+</div>
+<div class="project-library-body" id="projectLibraryList">
+<div class="project-library-empty">No saved project versions yet. Use <strong>Save Version</strong> to store the current editable canvas in this browser. JSON backup/import remains available as a safety option.</div>
+</div>
+<div class="project-library-footer">
+<button class="btn primary" id="projectLibrarySaveCurrentBtn" type="button">Save New Version</button>
+<button class="btn" id="projectLibraryImportFileBtn" style="display:none !important;" type="button">Import JSON Backup</button>
+<button class="btn" id="projectLibraryCloseBottomBtn" type="button">Close</button>
+</div>
+</div>
+</div>
+<div aria-label="Export readiness checklist" aria-live="polite" class="export-check-panel" id="exportCheckPanel">
+<div class="export-check-header">
+<div class="export-check-title">Export Readiness Check</div>
+<button aria-label="Close export readiness panel" class="export-check-close" id="exportCheckCloseBtn" type="button">×</button>
+</div>
+<div class="export-check-body" id="exportCheckBody">
+<div class="export-check-summary">Run the check before export to confirm the canvas model, DOM, grid wrappers, slot children, save support, and export function are aligned.</div>
+</div>
+<div class="export-check-actions">
+<button class="btn" id="exportCheckRefreshBtn" type="button">Recheck</button>
+<button class="btn primary" id="exportCheckDownloadBtn" type="button">Export HTML</button>
+</div>
+</div>
+<script src="app.js"></script>
 
-        <section class="tour-step" data-mode="handoff" aria-pressed="false">
-          <button class="tour-step-button" type="button">
-            <span class="step-num">7</span>
-            <span class="step-copy"><strong>Export / handoff</strong><span>Show what becomes clearer for developers.</span></span>
-          </button>
-          <div class="tour-step-detail">
-            <p>Its all designed to help developers better understand designer intent and streamline design to code handoff.</p>
-            <div class="inline-detail">1. Component hierarchy
-2. Layout rules
-3. Token references
-4. Schema / variant contracts
-5. Responsive behavior notes</div>
-            
-          </div>
-        </section>
-      </div>
-
-      <div class="panel-actions">
-        <button class="btn primary" id="startWalkthrough" type="button">Start tour</button>
-        <button class="btn" id="resetView" type="button">Reset</button>
-      </div>
-    </aside>
-
-    <main class="demo-area">
-<div class="app-shell" id="appScreen">
-        <header class="topbar" id="topbar" data-region="Header / App Shell">
-          <div class="brand">
-            <div class="brand-mark">N</div>
-            <div>
-              <h1>Network Operations Console</h1>
-              <span>Daily command view</span>
-            </div>
-          </div>
-
-          <div class="topbar-actions">
-            <label class="search">
-              <input type="search" placeholder="Search shipments, lanes, reports..." />
-            </label>
-            <button class="btn">Refresh</button>
-            <button class="btn primary">Create report</button>
-          </div>
-        </header>
-
-        <div class="main-layout" id="layoutGrid" data-region="Application Layout Grid">
-          <aside class="sidebar" data-region="Navigation Region">
-            <p class="nav-title">Workspace</p>
-            <nav class="nav" aria-label="Workspace navigation">
-              <a class="active" href="#">Overview <small>12</small></a>
-              <a href="#">Shipments <small>48</small></a>
-              <a href="#">Exceptions <small>7</small></a>
-              <a href="#">Reports <small>4</small></a>
-            </nav>
-
-            <p class="nav-title">System</p>
-            <div class="status-card">
-              <strong>Network sync active</strong>
-              <p>Last update completed 2 minutes ago. All regional feeds are reporting.</p>
-            </div>
-          </aside>
-
-          <main class="workspace" data-region="Main Content Region">
-            <section class="page-head" id="pageHead" data-region="Page Heading Region">
-              <div>
-                <h2>Operational health across the network</h2>
-                <p>Monitor shipment flow, capacity risks, exception queues, and priority workflows across active lanes.</p>
-              </div>
-
-              <div class="filter-row">
-                <select class="select" aria-label="Region">
-                  <option>All regions</option>
-                  <option>Central</option>
-                  <option>East</option>
-                  <option>West</option>
-                </select>
-                <select class="select" aria-label="Time period">
-                  <option>Today</option>
-                  <option>Last 7 days</option>
-                  <option>Last 30 days</option>
-                </select>
-              </div>
-            </section>
-
-            <section class="metrics-grid" id="metricsGrid" data-region="Metrics Grid">
-              <article class="metric-card" data-region="Metric Component">
-                <small>On-time flow</small>
-                <strong>94.8%</strong>
-                <span>+2.1% today</span>
-              </article>
-              <article class="metric-card" data-region="Metric Component">
-                <small>Active shipments</small>
-                <strong>18,420</strong>
-                <span>stable volume</span>
-              </article>
-              <article class="metric-card" data-region="Metric Component">
-                <small>Open exceptions</small>
-                <strong>37</strong>
-                <span class="warn">needs review</span>
-              </article>
-              <article class="metric-card" data-region="Metric Component">
-                <small>Critical holds</small>
-                <strong>6</strong>
-                <span class="bad">priority queue</span>
-              </article>
-            </section>
-
-            <section class="content-grid" id="contentGrid" data-region="Content Grid">
-              <article class="panel-card" id="workflowPanel" data-region="Workflow Panel Component">
-                <span class="token-tag token-1">--radius-lg: 22px</span>
-                <span class="token-tag token-2">--brand / --surface</span>
-                <span class="token-tag token-3">--space-3: 16px</span>
-                <div class="panel-head">
-                  <h3>Priority workflow</h3>
-                  <a href="#">View all</a>
-                </div>
-
-                <div class="workflow-list">
-                  <div class="workflow-item">
-                    <span class="status-dot"></span>
-                    <div>
-                      <strong>Memphis hub clearance</strong>
-                      <span>Shipment batch released to outbound lanes.</span>
-                    </div>
-                    <span class="chip">Ready</span>
-                  </div>
-
-                  <div class="workflow-item">
-                    <span class="status-dot warn"></span>
-                    <div>
-                      <strong>Weather exception review</strong>
-                      <span>Midwest route requires dispatcher confirmation.</span>
-                    </div>
-                    <span class="chip warn">Review</span>
-                  </div>
-
-                  <div class="workflow-item">
-                    <span class="status-dot bad"></span>
-                    <div>
-                      <strong>Address validation queue</strong>
-                      <span>Six high-priority shipments need correction.</span>
-                    </div>
-                    <span class="chip bad">Action</span>
-                  </div>
-                </div>
-
-                <div class="secondary-grid" data-region="Secondary Summary Grid">
-                  <div class="mini-card">
-                    <small>Capacity risk</small>
-                    <strong>Moderate</strong>
-                  </div>
-                  <div class="mini-card">
-                    <small>Staffing coverage</small>
-                    <strong>96%</strong>
-                  </div>
-                  <div class="mini-card">
-                    <small>Avg. delay</small>
-                    <strong>11 min</strong>
-                  </div>
-                </div>
-              </article>
-
-              <aside class="panel-card" data-region="Activity Feed Component">
-                <div class="panel-head">
-                  <h3>Recent activity</h3>
-                  <a href="#">Open log</a>
-                </div>
-
-                <div class="activity-list">
-                  <div class="activity-row">
-                    <strong>Exception closed</strong>
-                    <span>Route MEM-214 returned to normal processing.</span>
-                  </div>
-                  <div class="activity-row">
-                    <strong>Capacity alert</strong>
-                    <span>Additional sort capacity requested for regional lane.</span>
-                  </div>
-                  <div class="activity-row">
-                    <strong>Report generated</strong>
-                    <span>Daily network summary is ready for review.</span>
-                  </div>
-                  <div class="activity-row">
-                    <strong>Lane update</strong>
-                    <span>Outbound lane C-18 has been rebalanced.</span>
-                  </div>
-                </div>
-              </aside>
-            </section>
-          </main>
-        </div>
-      </div>
-    </main>
-  </div>
 
 
-  <div class="usecase-modal" id="usecaseModal" role="dialog" aria-modal="true" aria-label="How this can be used">
-    <div class="usecase-card">
-      <div class="usecase-head">
-        <strong>How this can be used</strong>
-        <button class="btn" id="closeUseCases" type="button">Close</button>
-      </div>
-      <div class="usecase-body">
-        <section class="usecase-item">
-          <h3>Structured Prototyping</h3>
-          <p>Create responsive, implementation-aware prototypes using governed components and real layout behavior.</p>
-        </section>
-        <section class="usecase-item">
-          <h3>Design System Exploration</h3>
-          <p>Explore component variants, spacing systems, semantic regions, and layout patterns within a structured environment.</p>
-        </section>
-        <section class="usecase-item">
-          <h3>Developer Communication</h3>
-          <p>Make layout intent, responsive behavior, and component relationships easier for developers to understand.</p>
-        </section>
-      </div>
-    </div>
-  </div>
-
-  <div class="screenshot-modal" id="screenshotModal" role="dialog" aria-modal="true" aria-label="Actual editor screenshot">
-    <div class="screenshot-card">
-      <div class="screenshot-head">
-        <strong>Actual editor screenshot</strong>
-        <button class="btn" id="closeScreenshot" type="button">Close</button>
-      </div>
-      <div class="screenshot-body">
-        <img src="demo-image.png" alt="Screenshot of the actual structured composition editor interface" />
-      </div>
-    </div>
-  </div>
 
 
-  <script>
-    const appScreen = document.getElementById('appScreen');
-    const tourSteps = Array.from(document.querySelectorAll('.tour-step'));
-    const startWalkthrough = document.getElementById('startWalkthrough');
-    const resetView = document.getElementById('resetView');
-    const showScreenshot = document.getElementById('showScreenshot');
-    const showUseCases = document.getElementById('showUseCases');
-    const usecaseModal = document.getElementById('usecaseModal');
-    const closeUseCases = document.getElementById('closeUseCases');
-    const screenshotModal = document.getElementById('screenshotModal');
-    const closeScreenshot = document.getElementById('closeScreenshot');
-    const viewportButtons = Array.from(document.querySelectorAll('.viewport-btn'));
 
-    const targets = {
-      structure: '#layoutGrid',
-      grid: '#metricsGrid',
-      flex: '#topbar',
-      tokens: '#workflowPanel',
-      schema: '#metricsGrid',
-      responsive: '#appScreen',
-      handoff: '#layoutGrid'
-    };
 
-    let activeTarget = null;
 
-    function setViewport(viewport) {
-      appScreen.classList.remove('tablet-preview', 'mobile-preview');
-      if (viewport === 'tablet') appScreen.classList.add('tablet-preview');
-      if (viewport === 'mobile') appScreen.classList.add('mobile-preview');
-      viewportButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.viewport === viewport));
-    }
+<!-- Component Contract Core: hidden data/model layer only. No visible UI is created by this block. -->
 
-    function clearView() {
-      appScreen.classList.remove(
-        'show-structure',
-        'show-grid',
-        'show-flex',
-        'show-tokens',
-        'show-schema',
-        'tablet-preview',
-        'mobile-preview'
-      );
-      if (activeTarget) activeTarget.classList.remove('spotlight-target');
-      activeTarget = null;
-      tourSteps.forEach(step => step.setAttribute('aria-pressed', 'true'));
-      setViewport('desktop');
-    }
+<!-- Component Contract Diagnostics: hidden developer-only helper. No visible UI is created. -->
 
-    function activateStep(mode) {
-      clearView();
 
-      const step = document.querySelector(`.tour-step[data-mode="${mode}"]`);
-      if (step) step.setAttribute('aria-pressed', 'false');
-
-      appScreen.classList.toggle('show-structure', mode === 'structure' || mode === 'handoff');
-      appScreen.classList.toggle('show-grid', mode === 'grid');
-      appScreen.classList.toggle('show-flex', mode === 'flex');
-      appScreen.classList.toggle('show-tokens', mode === 'tokens');
-      appScreen.classList.toggle('show-schema', mode === 'schema');
-
-      const target = document.querySelector(targets[mode]) || appScreen;
-      activeTarget = target;
-      activeTarget.classList.add('spotlight-target');
-
-      target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-      if (step) step.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    tourSteps.forEach(step => {
-      const button = step.querySelector('.tour-step-button');
-      button.addEventListener('click', () => activateStep(step.dataset.mode));
-    });
-
-    viewportButtons.forEach(btn => {
-      btn.addEventListener('click', (event) => {
-        event.stopPropagation();
-        setViewport(btn.dataset.viewport);
-      });
-    });
-
-    startWalkthrough.addEventListener('click', () => activateStep('structure'));
-    resetView.addEventListener('click', clearView);
-
-    showUseCases.addEventListener('click', () => usecaseModal.classList.add('visible'));
-    closeUseCases.addEventListener('click', () => usecaseModal.classList.remove('visible'));
-    usecaseModal.addEventListener('click', event => {
-      if (event.target === usecaseModal) usecaseModal.classList.remove('visible');
-    });
-
-    showScreenshot.addEventListener('click', () => screenshotModal.classList.add('visible'));
-    closeScreenshot.addEventListener('click', () => screenshotModal.classList.remove('visible'));
-    screenshotModal.addEventListener('click', event => {
-      if (event.target === screenshotModal) screenshotModal.classList.remove('visible');
-        usecaseModal.classList.remove('visible');
-    });
-
-    document.addEventListener('keydown', event => {
-      if (event.key === 'Escape') {
-        clearView();
-        screenshotModal.classList.remove('visible');
-      }
-    });
-
-    window.addEventListener('DOMContentLoaded', clearView);
-    window.addEventListener('pageshow', clearView);
-  </script>
 
 </body>
 </html>
